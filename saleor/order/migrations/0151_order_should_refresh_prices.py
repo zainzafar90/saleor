@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("order", "0147_alter_orderline_options"),
+        ("order", "0150_update_authorize_and_charge_status"),
     ]
 
     operations = [
