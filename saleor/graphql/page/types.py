@@ -12,7 +12,7 @@ from ..core.connection import (
     create_connection_slice,
     filter_connection_queryset,
 )
-from ..core.descriptions import ADDED_IN_33, DEPRECATED_IN_3X_FIELD
+from ..core.descriptions import ADDED_IN_33, DEPRECATED_IN_3X_FIELD, RICH_CONTENT
 from ..core.federation import federated_entity, resolve_federation_references
 from ..core.fields import FilterConnectionField, JSONString, PermissionsField
 from ..core.types import ModelObjectType, NonNullList
@@ -76,7 +76,7 @@ class PageType(ModelObjectType):
         return create_connection_slice(qs, info, kwargs, AttributeCountableConnection)
 
     @staticmethod
-    def resolve_has_pages(root: models.PageType, info, **kwargs):
+    def resolve_has_pages(root: models.PageType, info):
         return (
             PagesByPageTypeIdLoader(info.context)
             .load(root.pk)
@@ -84,7 +84,7 @@ class PageType(ModelObjectType):
         )
 
     @staticmethod
-    def __resolve_references(roots: List["PageType"], info, **_kwargs):
+    def __resolve_references(roots: List["PageType"], _info):
         return resolve_federation_references(PageType, roots, models.PageType.objects)
 
 
@@ -98,7 +98,7 @@ class Page(ModelObjectType):
     seo_title = graphene.String()
     seo_description = graphene.String()
     title = graphene.String(required=True)
-    content = JSONString(description="Content of the page (JSON).")
+    content = JSONString(description="Content of the page." + RICH_CONTENT)
     publication_date = graphene.Date(
         deprecation_reason=(
             f"{DEPRECATED_IN_3X_FIELD} "
@@ -113,7 +113,7 @@ class Page(ModelObjectType):
     page_type = graphene.Field(PageType, required=True)
     created = graphene.DateTime(required=True)
     content_json = JSONString(
-        description="Content of the page (JSON).",
+        description="Content of the page." + RICH_CONTENT,
         deprecation_reason=f"{DEPRECATED_IN_3X_FIELD} Use the `content` field instead.",
         required=True,
     )
@@ -133,7 +133,7 @@ class Page(ModelObjectType):
         model = models.Page
 
     @staticmethod
-    def resolve_publication_date(root: models.Page, info, **_kwargs):
+    def resolve_publication_date(root: models.Page, _info):
         return root.published_at
 
     @staticmethod
@@ -145,7 +145,7 @@ class Page(ModelObjectType):
         return PageTypeByIdLoader(info.context).load(root.page_type_id)
 
     @staticmethod
-    def resolve_content_json(root: models.Page, info):
+    def resolve_content_json(root: models.Page, _info):
         content = root.content
         return content if content is not None else {}
 

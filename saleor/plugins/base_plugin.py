@@ -20,23 +20,26 @@ from ..payment.interface import (
     InitializedPaymentResponse,
     PaymentData,
     PaymentGateway,
+    TransactionActionData,
 )
 from .models import PluginConfiguration
 
 if TYPE_CHECKING:
     # flake8: noqa
     from ..account.models import Address, User
+    from ..app.models import App
     from ..channel.models import Channel
     from ..checkout.fetch import CheckoutInfo, CheckoutLineInfo
     from ..checkout.models import Checkout
     from ..core.middleware import Requestor
     from ..core.notify_events import NotifyEventType
     from ..core.taxes import TaxData, TaxType
-    from ..discount import DiscountInfo
+    from ..discount import DiscountInfo, Voucher
     from ..discount.models import Sale
     from ..giftcard.models import GiftCard
     from ..graphql.discount.mutations import NodeCatalogueInfo
     from ..invoice.models import Invoice
+    from ..menu.models import Menu, MenuItem
     from ..order.models import Fulfillment, Order, OrderLine
     from ..page.models import Page
     from ..product.models import (
@@ -48,6 +51,7 @@ if TYPE_CHECKING:
     )
     from ..shipping.interface import ShippingMethodData
     from ..shipping.models import ShippingMethod, ShippingZone
+    from ..warehouse.models import Warehouse
 
 PluginConfigurationType = List[dict]
 NoneType = type(None)
@@ -128,6 +132,30 @@ class BasePlugin:
 
     def __str__(self):
         return self.PLUGIN_NAME
+
+    #  Trigger when app is installed.
+    #
+    #  Overwrite this method if you need to trigger specific logic after an app is
+    #  installed.
+    app_installed: Callable[["App", None], None]
+
+    #  Trigger when app is deleted.
+    #
+    #  Overwrite this method if you need to trigger specific logic after an app is
+    #  deleted.
+    app_deleted: Callable[["App", None], None]
+
+    #  Trigger when app is updated.
+    #
+    #  Overwrite this method if you need to trigger specific logic after an app is
+    #  updated.
+    app_updated: Callable[["App", None], None]
+
+    #  Trigger when channel status is changed.
+    #
+    #  Overwrite this method if you need to trigger specific logic after an app
+    #  status is changed.
+    app_status_changed: Callable[["App", None], None]
 
     #  Apply taxes to the product price based on the customer country.
     #
@@ -486,6 +514,42 @@ class BasePlugin:
 
     list_payment_sources: Callable[[str, Any], List["CustomerSource"]]
 
+    #  Trigger when menu is created.
+    #
+    #  Overwrite this method if you need to trigger specific logic after a menu is
+    #  created.
+    menu_created: Callable[["Menu", None], None]
+
+    #  Trigger when menu is deleted.
+    #
+    #  Overwrite this method if you need to trigger specific logic after a menu is
+    #  deleted.
+    menu_deleted: Callable[["Menu", None], None]
+
+    #  Trigger when menu is updated.
+    #
+    #  Overwrite this method if you need to trigger specific logic after a menu is
+    #  updated.
+    menu_updated: Callable[["Menu", None], None]
+
+    #  Trigger when menu item is created.
+    #
+    #  Overwrite this method if you need to trigger specific logic after a menu item is
+    #  created.
+    menu_item_created: Callable[["MenuItem", None], None]
+
+    #  Trigger when menu item is deleted.
+    #
+    #  Overwrite this method if you need to trigger specific logic after a menu item is
+    #  deleted.
+    menu_item_deleted: Callable[["MenuItem", None], None]
+
+    #  Trigger when menu item is updated.
+    #
+    #  Overwrite this method if you need to trigger specific logic after a menu item is
+    #  updated.
+    menu_item_updated: Callable[["MenuItem", None], None]
+
     #  Handle notification request.
     #
     #  Overwrite this method if the plugin is responsible for sending notifications.
@@ -560,6 +624,8 @@ class BasePlugin:
     ]
 
     process_payment: Callable[["PaymentData", Any], Any]
+
+    transaction_action_request: Callable[["TransactionActionData", None], None]
 
     #  Trigger when product is created.
     #
@@ -660,6 +726,42 @@ class BasePlugin:
     tracking_number_updated: Callable[["Fulfillment", Any], Any]
 
     void_payment: Callable[["PaymentData", Any], GatewayResponse]
+
+    #  Trigger when warehouse is created.
+    #
+    #  Overwrite this method if you need to trigger specific logic after a warehouse is
+    #  created.
+    warehouse_created: Callable[["Warehouse", None], None]
+
+    #  Trigger when warehouse is deleted.
+    #
+    #  Overwrite this method if you need to trigger specific logic after a warehouse is
+    #  deleted.
+    warehouse_deleted: Callable[["Warehouse", None], None]
+
+    #  Trigger when warehouse is updated.
+    #
+    #  Overwrite this method if you need to trigger specific logic after a warehouse is
+    #  updated.
+    warehouse_updated: Callable[["Warehouse", None], None]
+
+    #  Trigger when voucher is created.
+    #
+    #  Overwrite this method if you need to trigger specific logic after a voucher is
+    #  created.
+    voucher_created: Callable[["Voucher", None], None]
+
+    #  Trigger when voucher is deleted.
+    #
+    #  Overwrite this method if you need to trigger specific logic after a voucher is
+    #  deleted.
+    voucher_deleted: Callable[["Voucher", None], None]
+
+    #  Trigger when voucher is updated.
+    #
+    #  Overwrite this method if you need to trigger specific logic after a voucher is
+    #  updated.
+    voucher_updated: Callable[["Voucher", None], None]
 
     #  Handle received http request.
     #

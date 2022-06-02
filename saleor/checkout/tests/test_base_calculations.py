@@ -320,8 +320,8 @@ def test_calculate_base_line_unit_price_with_discounts_apply_once_per_order(
         channel_listing=checkout_line_info.channel_listing,
         discounts=[],
     )
-    # apply once per order is applied when calculating line total.
-    assert prices_data == expected_price
+    expected_voucher_amount = expected_price * voucher_percent_value / 100
+    assert prices_data == expected_price - expected_voucher_amount
 
 
 def test_calculate_base_line_unit_price_with_discounts_once_per_order_custom_prices(
@@ -357,8 +357,8 @@ def test_calculate_base_line_unit_price_with_discounts_once_per_order_custom_pri
     # then
     currency = checkout_line_info.channel_listing.currency
     expected_price = Money(price_override, currency)
-    # apply once per order is applied when calculating line total.
-    assert prices_data == expected_price
+    expected_voucher_amount = expected_price * voucher_percent_value / 100
+    assert prices_data == expected_price - expected_voucher_amount
 
 
 def test_calculate_base_line_unit_price_with_variant_on_sale_and_voucher(

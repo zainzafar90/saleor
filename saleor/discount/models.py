@@ -1,6 +1,7 @@
 from decimal import Decimal
 from functools import partial
 from typing import TYPE_CHECKING, Optional
+from uuid import uuid4
 
 from django.conf import settings
 from django.contrib.postgres.indexes import GinIndex
@@ -350,6 +351,9 @@ class SaleTranslation(Translation):
 
 
 class OrderDiscount(models.Model):
+    id = models.UUIDField(primary_key=True, editable=False, unique=True, default=uuid4)
+    old_id = models.PositiveIntegerField(unique=True, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     order = models.ForeignKey(
         "order.Order",
         related_name="discounts",
@@ -390,4 +394,4 @@ class OrderDiscount(models.Model):
     class Meta:
         # Orders searching index
         indexes = [GinIndex(fields=["name", "translated_name"])]
-        ordering = ("pk",)
+        ordering = ("created_at", "id")

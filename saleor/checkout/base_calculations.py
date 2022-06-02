@@ -21,16 +21,13 @@ if TYPE_CHECKING:
     from .fetch import CheckoutLineInfo, ShippingMethodInfo
 
 
-def calculate_base_line_unit_price(
+def _calculate_base_line_unit_price(
     line_info: "CheckoutLineInfo",
     channel: "Channel",
     discounts: Optional[Iterable[DiscountInfo]] = None,
+    include_voucher=True,
 ) -> Money:
-    """Calculate line unit price.
-
-    Unit price includes discount from sale and voucher A voucher is added to the unit
-    price when line's product matches to products applicable for the voucher.
-    """
+    """Calculate base line unit price without voucher applied once per order."""
     variant = line_info.variant
     variant_price = variant.get_price(
         line_info.product,
@@ -41,8 +38,9 @@ def calculate_base_line_unit_price(
         line_info.line.price_override,
     )
 
-    # TODO IN separate PR:
-    # We should include apply_once_per_order into unit price.
+    if not include_voucher:
+        return quantize_price(variant_price, variant_price.currency)
+
     if line_info.voucher and not line_info.voucher.apply_once_per_order:
         unit_price = max(
             variant_price
@@ -55,13 +53,37 @@ def calculate_base_line_unit_price(
     return quantize_price(unit_price, unit_price.currency)
 
 
+def calculate_base_line_unit_price(
+    line_info: "CheckoutLineInfo",
+    channel: "Channel",
+    discounts: Optional[Iterable[DiscountInfo]] = None,
+) -> Money:
+    """Calculate line unit prices including discounts and vouchers."""
+    prices_data = calculate_base_line_total_price(
+        line_info=line_info, channel=channel, discounts=discounts
+    )
+    quantity = line_info.line.quantity
+    currency = prices_data.currency
+    return quantize_price(prices_data / quantity, currency)
+
+
+def calculate_undiscounted_base_line_unit_price(
+    line_info: "CheckoutLineInfo",
+    channel: "Channel",
+) -> Money:
+    """Calculate line unit prices excluding discounts and vouchers."""
+    return _calculate_base_line_unit_price(
+        line_info=line_info, channel=channel, discounts=[], include_voucher=False
+    )
+
+
 def calculate_base_line_total_price(
     line_info: "CheckoutLineInfo",
     channel: "Channel",
     discounts: Optional[Iterable[DiscountInfo]] = None,
 ) -> Money:
-    """Calculate line total prices including sales and specific products vouchers."""
-    unit_price = calculate_base_line_unit_price(
+    """Calculate line total prices including discounts and vouchers."""
+    unit_price = _calculate_base_line_unit_price(
         line_info=line_info, channel=channel, discounts=discounts
     )
     if line_info.voucher and line_info.voucher.apply_once_per_order:
@@ -71,7 +93,7 @@ def calculate_base_line_total_price(
             zero_money(unit_price.currency),
         )
         # we add -1 as we handle a case when voucher is applied only to single line
-        # of the cheapest line
+        # of the cheapest item
         quantity_without_voucher = line_info.line.quantity - 1
         total_price = (
             unit_price * quantity_without_voucher + variant_price_with_discounts
@@ -79,6 +101,18 @@ def calculate_base_line_total_price(
     else:
         total_price = unit_price * line_info.line.quantity
 
+    return quantize_price(total_price, total_price.currency)
+
+
+def calculate_undiscounted_base_line_total_price(
+    line_info: "CheckoutLineInfo",
+    channel: "Channel",
+) -> Money:
+    """Calculate line total prices excluding discounts and vouchers."""
+    unit_price = _calculate_base_line_unit_price(
+        line_info=line_info, channel=channel, discounts=[], include_voucher=False
+    )
+    total_price = unit_price * line_info.line.quantity
     return quantize_price(total_price, total_price.currency)
 
 
@@ -175,9 +209,19 @@ def base_checkout_line_total(
 
 def base_order_line_total(order_line: "OrderLine") -> OrderTaxedPricesData:
     quantity = order_line.quantity
+    price_with_discounts = (
+        TaxedMoney(order_line.base_unit_price, order_line.base_unit_price) * quantity
+    )
+    undiscounted_price = (
+        TaxedMoney(
+            order_line.undiscounted_base_unit_price,
+            order_line.undiscounted_base_unit_price,
+        )
+        * quantity
+    )
     return OrderTaxedPricesData(
-        undiscounted_price=order_line.undiscounted_unit_price * quantity,
-        price_with_discounts=order_line.unit_price * quantity,
+        undiscounted_price=undiscounted_price,
+        price_with_discounts=price_with_discounts,
     )
 
 

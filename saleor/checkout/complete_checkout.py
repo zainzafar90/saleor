@@ -52,6 +52,7 @@ from ..warehouse.availability import check_stock_and_preorder_quantity_bulk
 from ..warehouse.management import allocate_preorders, allocate_stocks
 from ..warehouse.reservations import is_reservation_enabled
 from . import AddressType
+from .base_calculations import calculate_base_line_unit_price
 from .calculations import fetch_checkout_prices_if_expired
 from .checkout_cleaner import (
     _validate_gift_cards,
@@ -174,6 +175,9 @@ def _create_line_for_order(
     if translated_variant_name == variant_name:
         translated_variant_name = ""
 
+    base_prices_data = calculate_base_line_unit_price(
+        line_info=checkout_line_info, channel=checkout_info.channel, discounts=discounts
+    )
     total_line_price_data = calculations.checkout_line_total(
         manager=manager,
         checkout_info=checkout_info,
@@ -260,6 +264,12 @@ def _create_line_for_order(
         unit_discount=discount_amount,  # type: ignore
         unit_discount_reason=unit_discount_reason,
         unit_discount_value=discount_amount.amount,  # we store value as fixed discount
+        # TODO In separate PR:
+        # Consider thouse two values
+        # base_unit_price=base_prices_data.price_with_discounts,
+        # undiscounted_base_unit_price=base_prices_data.undiscounted_price,
+        base_unit_price=base_prices_data,
+        undiscounted_base_unit_price=base_prices_data,
     )
     is_digital = line.is_digital
     line_info = OrderLineInfo(
@@ -488,7 +498,7 @@ def _create_order(
         voucher = order_data.get("voucher")
         # When we have a voucher for specific products we track it directly in the
         # Orderline. Voucher with 'apply_once_per_order' is handled in the same way
-        # as we apply it only for single quantity of the cheapest line.
+        # as we apply it only for single quantity of the cheapest item.
         if not voucher or (
             voucher.type != VoucherType.SPECIFIC_PRODUCT
             and not voucher.apply_once_per_order
@@ -914,7 +924,7 @@ def _handle_checkout_discount(
 
         # When we have a voucher for specific products we track it directly in the
         # Orderline. Voucher with 'apply_once_per_order' is handled in the same way
-        # as we apply it only for single quantity of the cheapest line.
+        # as we apply it only for single quantity of the cheapest item.
         if not voucher or (
             voucher.type != VoucherType.SPECIFIC_PRODUCT
             and not voucher.apply_once_per_order
@@ -1068,6 +1078,7 @@ def _create_order_from_checkout(
 
     # payments
     checkout_info.checkout.payments.update(order=order, checkout_id=None)
+    checkout_info.checkout.payment_transactions.update(order=order, checkout_id=None)
 
     # order search
     order.search_document = prepare_order_search_document_value(order)

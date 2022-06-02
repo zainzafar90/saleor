@@ -251,7 +251,10 @@ def delivery_update(delivery: "EventDelivery", status: str):
 
 def clear_successful_delivery(delivery: "EventDelivery"):
     if delivery.status == EventDeliveryStatus.SUCCESS:
+        payload_id = delivery.payload_id
         delivery.delete()
+        if payload_id:
+            EventPayload.objects.filter(pk=payload_id, deliveries__isnull=True).delete()
 
 
 DEFAULT_TAX_CODE = "UNMAPPED"

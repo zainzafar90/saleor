@@ -1,6 +1,6 @@
 import json
 from dataclasses import asdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from itertools import chain
 from unittest import mock
@@ -8,6 +8,7 @@ from unittest.mock import ANY, Mock, patch, sentinel
 
 import graphene
 import pytest
+import pytz
 from django.core.serializers.json import DjangoJSONEncoder
 from django.utils import timezone
 from freezegun import freeze_time
@@ -26,6 +27,9 @@ from ...order import OrderOrigin
 from ...order.actions import fulfill_order_lines
 from ...order.fetch import OrderLineInfo
 from ...order.models import Order
+from ...payment import TransactionAction
+from ...payment.interface import TransactionActionData, TransactionData
+from ...payment.models import TransactionItem
 from ...plugins.manager import get_plugins_manager
 from ...plugins.webhook.utils import from_payment_app_id
 from ...product.models import ProductVariant
@@ -51,6 +55,7 @@ from ..payloads import (
     generate_product_variant_with_stock_payload,
     generate_requestor,
     generate_sale_payload,
+    generate_transaction_action_request_payload,
     generate_translation_payload,
     get_base_price,
 )
@@ -80,13 +85,16 @@ def order_for_payload(fulfilled_order):
         amount_value=Decimal("33.0"),
         reason="Discount from staff",
     )
-    order.discounts.create(
+    discount = order.discounts.create(
         type=OrderDiscountType.VOUCHER,
         value_type=DiscountValueType.PERCENTAGE,
         value=Decimal("10"),
         amount_value=Decimal("16.5"),
         name="Voucher",
     )
+
+    discount.created_at = datetime.now(pytz.utc) + timedelta(days=1)
+    discount.save(update_fields=["created_at"])
 
     line_without_sku = order.lines.last()
     line_without_sku.product_sku = None
@@ -128,6 +136,9 @@ def test_generate_order_payload(
     payment = payment_for_payload
     fulfillment = order.fulfillments.first()
     discount_1, discount_2 = list(order.discounts.all())
+    shipping_method_channel_listing = order.shipping_method.channel_listings.filter(
+        channel=order.channel,
+    ).first()
 
     # when
     payload = json.loads(generate_order_payload(order, customer_user))[0]
@@ -161,6 +172,13 @@ def test_generate_order_payload(
             ),
             "name": order.shipping_method.name,
             "type": order.shipping_method.type,
+            "currency": shipping_method_channel_listing.currency,
+            "price_amount": str(
+                quantize_price(
+                    shipping_method_channel_listing.price_amount,
+                    shipping_method_channel_listing.currency,
+                )
+            ),
         },
         "payments": [
             {
@@ -310,6 +328,9 @@ def test_generate_order_payload_without_taxes(
     payment = payment_for_payload
     fulfillment = order.fulfillments.first()
     discount_1, discount_2 = list(order.discounts.all())
+    shipping_method_channel_listing = order.shipping_method.channel_listings.filter(
+        channel=order.channel,
+    ).first()
 
     payload = json.loads(
         generate_order_payload_without_taxes(
@@ -345,6 +366,13 @@ def test_generate_order_payload_without_taxes(
             ),
             "name": order.shipping_method.name,
             "type": order.shipping_method.type,
+            "currency": shipping_method_channel_listing.currency,
+            "price_amount": str(
+                quantize_price(
+                    shipping_method_channel_listing.price_amount,
+                    shipping_method_channel_listing.currency,
+                )
+            ),
         },
         "payments": [
             {
@@ -999,8 +1027,8 @@ def test_generate_invoice_payload(fulfilled_order):
             "token": str(invoice.order.id),
             "id": graphene.Node.to_global_id("Order", invoice.order.id),
             "language_code": "en",
-            "private_metadata": {},
-            "metadata": {},
+            "private_metadata": invoice.order.private_metadata,
+            "metadata": invoice.order.metadata,
             "created": ANY,
             "status": "fulfilled",
             "origin": OrderOrigin.CHECKOUT,
@@ -1046,6 +1074,42 @@ def test_generate_payment_payload(dummy_webhook_app_payment_data):
     ).name
     expected_payload["meta"] = generate_meta(requestor_data=generate_requestor())
 
+    assert payload == json.dumps(expected_payload, cls=CustomJsonEncoder)
+
+
+@freeze_time("1914-06-28 10:50")
+def test_generate_payment_with_transactions_payload(dummy_webhook_app_payment_data):
+    transaction_data = {
+        "token": "token",
+        "is_success": True,
+        "kind": "auth",
+        "gateway_response": {"status": "SUCCESS"},
+        "amount": {
+            "amount": str(
+                quantize_price(
+                    dummy_webhook_app_payment_data.amount,
+                    dummy_webhook_app_payment_data.currency,
+                )
+            ),
+            "currency": dummy_webhook_app_payment_data.currency,
+        },
+    }
+
+    dummy_webhook_app_payment_data.transactions = [TransactionData(**transaction_data)]
+
+    payload = generate_payment_payload(dummy_webhook_app_payment_data)
+    expected_payload = asdict(dummy_webhook_app_payment_data)
+
+    expected_payload["amount"] = Decimal(expected_payload["amount"]).quantize(
+        Decimal("0.01")
+    )
+    expected_payload["payment_method"] = from_payment_app_id(
+        dummy_webhook_app_payment_data.gateway
+    ).name
+
+    expected_payload["meta"] = generate_meta(requestor_data=generate_requestor())
+
+    assert expected_payload["transactions"]
     assert payload == json.dumps(expected_payload, cls=CustomJsonEncoder)
 
 
@@ -1582,6 +1646,10 @@ def test_generate_checkout_payload(
     # when
     payload = json.loads(generate_checkout_payload(checkout, customer_user))[0]
 
+    shipping_method_channel_listing = checkout.shipping_method.channel_listings.filter(
+        channel=checkout.channel,
+    ).first()
+
     # then
     assert payload == {
         "type": "Checkout",
@@ -1646,6 +1714,13 @@ def test_generate_checkout_payload(
             ),
             "name": checkout.shipping_method.name,
             "type": checkout.shipping_method.type,
+            "currency": shipping_method_channel_listing.currency,
+            "price_amount": str(
+                quantize_price(
+                    shipping_method_channel_listing.price_amount,
+                    shipping_method_channel_listing.currency,
+                )
+            ),
         },
         "lines": serialize_checkout_lines(checkout, []),
         "collection_point": json.loads(
@@ -1771,3 +1846,155 @@ def test_get_base_price(taxes_included, amount):
     # given
     price = Mock(net=Mock(amount=NET_AMOUNT), gross=Mock(amount=GROSS_AMOUNT))
     assert amount == get_base_price(price, taxes_included)
+
+
+@pytest.mark.parametrize(
+    "action_type, action_value",
+    [
+        (TransactionAction.CHARGE, Decimal("5.000")),
+        (TransactionAction.REFUND, Decimal("9.000")),
+        (TransactionAction.VOID, None),
+    ],
+)
+@freeze_time("1914-06-28 10:50")
+def test_generate_transaction_action_request_payload_for_order(
+    action_type, action_value, order, app, rf
+):
+    # given
+    request = rf.request()
+    request.app = app
+    request.user = None
+    requestor = get_user_or_app_from_context(request)
+
+    transaction = TransactionItem.objects.create(
+        status="Authorized",
+        type="Credit card",
+        reference="PSP ref",
+        available_actions=["capture", "void"],
+        currency="USD",
+        order_id=order.pk,
+        authorized_value=Decimal("10"),
+    )
+
+    # when
+    payload = json.loads(
+        generate_transaction_action_request_payload(
+            transaction_data=TransactionActionData(
+                transaction=transaction,
+                action_type=action_type,
+                action_value=action_value,
+            ),
+            requestor=requestor,
+        )
+    )
+
+    # then
+    currency = transaction.currency
+    action_value = str(quantize_price(action_value, currency)) if action_value else None
+    assert payload == {
+        "action": {
+            "type": action_type,
+            "value": action_value,
+            "currency": currency,
+        },
+        "transaction": {
+            "status": transaction.status,
+            "type": transaction.type,
+            "reference": transaction.reference,
+            "available_actions": transaction.available_actions,
+            "currency": currency,
+            "charged_value": str(quantize_price(transaction.charged_value, currency)),
+            "authorized_value": str(
+                quantize_price(transaction.authorized_value, currency)
+            ),
+            "refunded_value": str(quantize_price(transaction.refunded_value, currency)),
+            "voided_value": str(quantize_price(transaction.voided_value, currency)),
+            "order_id": graphene.Node.to_global_id("Order", order.pk),
+            "checkout_id": None,
+            "created_at": parse_django_datetime(transaction.created_at),
+            "modified_at": parse_django_datetime(transaction.modified_at),
+        },
+        "meta": {
+            "issuing_principal": {"id": "Sample app objects", "type": "app"},
+            "issued_at": timezone.make_aware(
+                datetime.strptime("1914-06-28 10:50", "%Y-%m-%d %H:%M"), timezone.utc
+            ).isoformat(),
+            "version": __version__,
+        },
+    }
+
+
+@pytest.mark.parametrize(
+    "action_type, action_value",
+    [
+        (TransactionAction.CHARGE, Decimal("5.000")),
+        (TransactionAction.REFUND, Decimal("9.000")),
+        (TransactionAction.VOID, None),
+    ],
+)
+@freeze_time("1914-06-28 10:50")
+def test_generate_transaction_action_request_payload_for_checkout(
+    action_type, action_value, checkout, app, rf
+):
+    # given
+    request = rf.request()
+    request.app = app
+    request.user = None
+    requestor = get_user_or_app_from_context(request)
+
+    transaction = TransactionItem.objects.create(
+        status="Authorized",
+        type="Credit card",
+        reference="PSP ref",
+        available_actions=["capture", "void"],
+        currency="USD",
+        checkout_id=checkout.pk,
+        authorized_value=Decimal("10"),
+    )
+
+    # when
+    payload = json.loads(
+        generate_transaction_action_request_payload(
+            transaction_data=TransactionActionData(
+                transaction=transaction,
+                action_type=action_type,
+                action_value=action_value,
+            ),
+            requestor=requestor,
+        )
+    )
+
+    # then
+    currency = transaction.currency
+    action_value = str(quantize_price(action_value, currency)) if action_value else None
+    assert payload == {
+        "action": {
+            "type": action_type,
+            "value": action_value,
+            "currency": currency,
+        },
+        "transaction": {
+            "status": transaction.status,
+            "type": transaction.type,
+            "reference": transaction.reference,
+            "available_actions": transaction.available_actions,
+            "currency": currency,
+            "charged_value": str(quantize_price(transaction.charged_value, currency)),
+            "authorized_value": str(
+                quantize_price(transaction.authorized_value, currency)
+            ),
+            "refunded_value": str(quantize_price(transaction.refunded_value, currency)),
+            "voided_value": str(quantize_price(transaction.voided_value, currency)),
+            "order_id": None,
+            "checkout_id": graphene.Node.to_global_id("Checkout", checkout.pk),
+            "created_at": parse_django_datetime(transaction.created_at),
+            "modified_at": parse_django_datetime(transaction.modified_at),
+        },
+        "meta": {
+            "issuing_principal": {"id": "Sample app objects", "type": "app"},
+            "issued_at": timezone.make_aware(
+                datetime.strptime("1914-06-28 10:50", "%Y-%m-%d %H:%M"), timezone.utc
+            ).isoformat(),
+            "version": __version__,
+        },
+    }

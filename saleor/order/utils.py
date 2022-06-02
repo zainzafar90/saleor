@@ -225,18 +225,18 @@ def add_variant_to_order(
         channel_listing = variant.channel_listings.get(channel=channel)
 
         # vouchers are not applied for new lines in unconfirmed/draft orders
-        unit_price = variant.get_price(
+        untaxed_unit_price = variant.get_price(
             product, collections, channel, channel_listing, discounts
         )
         if not discounts:
-            undiscounted_price = unit_price
+            untaxed_undiscounted_price = untaxed_unit_price
         else:
-            undiscounted_price = variant.get_price(
+            untaxed_undiscounted_price = variant.get_price(
                 product, collections, channel, channel_listing, []
             )
-        unit_price = TaxedMoney(net=unit_price, gross=unit_price)
+        unit_price = TaxedMoney(net=untaxed_unit_price, gross=untaxed_unit_price)
         undiscounted_unit_price = TaxedMoney(
-            net=undiscounted_price, gross=undiscounted_price
+            net=untaxed_undiscounted_price, gross=untaxed_undiscounted_price
         )
         total_price = unit_price * quantity
         undiscounted_total_price = unit_price * quantity
@@ -261,6 +261,8 @@ def add_variant_to_order(
             quantity=quantity,
             unit_price=unit_price,
             undiscounted_unit_price=undiscounted_unit_price,
+            base_unit_price=untaxed_unit_price,
+            undiscounted_base_unit_price=untaxed_undiscounted_price,
             total_price=total_price,
             undiscounted_total_price=undiscounted_total_price,
             variant=variant,
@@ -761,17 +763,17 @@ def update_discount_for_order_line(
         order_line.unit_discount_reason = reason
         fields_to_update.append("unit_discount_reason")
     if current_value != value or current_value_type != value_type:
-        undiscounted_unit_price = order_line.undiscounted_unit_price
-        currency = undiscounted_unit_price.currency
-        unit_price_with_discount = apply_discount_to_value(
-            value, value_type, currency, undiscounted_unit_price
+        undiscounted_base_unit_price = order_line.undiscounted_base_unit_price
+        currency = undiscounted_base_unit_price.currency
+        base_unit_price = apply_discount_to_value(
+            value, value_type, currency, undiscounted_base_unit_price
         )
 
-        order_line.unit_discount = (
-            undiscounted_unit_price - unit_price_with_discount
-        ).gross
+        order_line.unit_discount = undiscounted_base_unit_price - base_unit_price
 
-        order_line.unit_price = unit_price_with_discount
+        order_line.unit_price = TaxedMoney(base_unit_price, base_unit_price)
+        order_line.base_unit_price = base_unit_price
+
         order_line.unit_discount_type = value_type
         order_line.unit_discount_value = value
         order_line.total_price = order_line.unit_price * order_line.quantity
@@ -792,6 +794,7 @@ def update_discount_for_order_line(
                 "unit_price_net_amount",
                 "total_price_net_amount",
                 "total_price_gross_amount",
+                "base_unit_price_amount",
                 "undiscounted_unit_price_gross_amount",
                 "undiscounted_unit_price_net_amount",
                 "undiscounted_total_price_gross_amount",
@@ -808,7 +811,15 @@ def remove_discount_from_order_line(
     order_line: OrderLine, order: "Order", manager, tax_included
 ):
     """Drop discount applied to order line. Restore undiscounted price."""
-    order_line.unit_price = order_line.undiscounted_unit_price
+    order_line.unit_price = TaxedMoney(
+        net=order_line.undiscounted_base_unit_price,
+        gross=order_line.undiscounted_base_unit_price,
+    )
+    order_line.base_unit_price = order_line.undiscounted_base_unit_price
+    order_line.undiscounted_unit_price = TaxedMoney(
+        net=order_line.undiscounted_base_unit_price,
+        gross=order_line.undiscounted_base_unit_price,
+    )
     order_line.unit_discount_amount = Decimal(0)
     order_line.unit_discount_value = Decimal(0)
     order_line.unit_discount_reason = ""
@@ -820,7 +831,9 @@ def remove_discount_from_order_line(
             "unit_discount_reason",
             "unit_price_gross_amount",
             "unit_price_net_amount",
+            "base_unit_price_amount",
             "total_price_net_amount",
             "total_price_gross_amount",
+            "tax_rate",
         ]
     )

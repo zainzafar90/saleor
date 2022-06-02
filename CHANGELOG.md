@@ -2,10 +2,46 @@
 
 All notable, unreleased changes to this project will be documented in this file. For the released changes, please visit the [Releases](https://github.com/mirumee/saleor/releases) page.
 
-# Unreleased
+## Unreleased
+
+- Migrate order line id from int to UUID - #9637 by @IKarbowiak
+  - Changed the order line `id` from `int` to `UUID`, the old ids still can be used
+  for old order lines.
+- Fix invalid `ADDED_PRODUCTS` event parameter for `OrderLinesCreate` mutation - #9653 by @IKarbowiak
+- Fix sorting by publication date with pagination - #9741 by @IKarbowiak
+- Fix max_length for voucher_code in Checkout model - #9791 by @SzymJ
+- Fix sorting by publication date with pagination - #9741 by IKarbowiak
+- Migrate order discount id from int to UUID - #9729 by @IKarbowiak
+  - Changed the order discount `id` from `int` to `UUID`, the old ids still can be used
+  for old order discounts.
+- Add `unitPrice`, `undiscountedUnitPrice`, `undiscountedTotalPrice` fields to `CheckoutLine` type - #9821 by @fowczarek
+
+
+## Breaking
+
+- Hide private metadata in notification payloads - #9849 by @maarcingebala
+  - From now on, the `private_metadata` field in `NOTIFY_USER` webhook payload is deprecated and it will return an empty dictionary. This change also affects `AdminEmailPlugin`, `UserEmailPlugin`, an d `SendgridEmailPlugin`.
 
 ### Other changes
 - Fix for sending incorrect prices to Avatax - #9633 by @korycins
+- PREVIEW_FEATURE: Add mutations for managing a payment transaction attached to order/checkout. - #9564 by @korycins
+  - add fields:
+    - `order.transactions`
+    - `checkout.transactions`
+  - add mutations:
+    - `transactionCreate`
+    - `transactionUpdate`
+    - `transactionRequestAction`
+  - add new webhook event:
+    - `TRANSACTION_ACTION_REQUEST`
+
+#### Saleor Apps
+- Add webhooks `MENU_CREATED`, `MENU_UPDATED`, `MENU_DELETED`, `MENU_ITEM_CREATED`, `MENU_ITEM_UPDATED`, `MENU_ITEM_DELETED` - #9651 by @SzymJ
+- Add webhooks `VOUCHER_CREATED`, `VOUCHER_UPDATED`, `VOUCHER_DELETED` - #9657 by @SzymJ
+- Add webhooks `APP_CREATED`, `APP_UPDATED`, `APP_DELETED`, `APP_STATUS_CHANGED` - #9698 by @SzymJ
+- Migrate checkout line id from int to UUID - #9675 by @IKarbowiak
+  - Changed the checkout line `id` from `int` to `UUID`, the old ids still can be used
+  for old checkout lines.
 
 # 3.3.1
 
@@ -20,6 +56,8 @@ All notable, unreleased changes to this project will be documented in this file.
 
 ### Other changes
 
+- Fix filtering product attributes by date range - #9543 by @IKarbowiak
+- Fix for raising Permission Denied when anonymous user calls `checkout.customer` field - #9573 by @korycins
 - Use fulltext search for products (#9344) (4b6f25964) by @patrys
 - Precise timestamps for publication dates - #9581 by @IKarbowiak
   - Change `publicationDate` fields to `publishedAt` date time fields.
@@ -52,6 +90,7 @@ All notable, unreleased changes to this project will be documented in this file.
 - Fix for raising Permission Denied when anonymous user calls `checkout.customer` field - #9573 by @korycins
 - Optimize stock warehouse resolver performance (955489bff) by @tomaszszymanski129
 - Improve shipping zone filters performance (#9540) (7841ec536) by @tomaszszymanski129
+
 
 # 3.2.0
 

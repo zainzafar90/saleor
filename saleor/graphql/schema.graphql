@@ -6,7 +6,7 @@ schema {
 
 type Query {
   """
-  Look up a webhook by ID. Requires one of the following permissions: AppPermission.MANAGE_APPS, AuthorizationFilters.OWNER
+  Look up a webhook by ID. Requires one of the following permissions: MANAGE_APPS, OWNER.
   """
   webhook(
     """ID of the webhook."""
@@ -526,11 +526,7 @@ type Query {
     last: Int
   ): OrderEventCountableConnection
 
-  """
-  Look up an order by ID.
-  
-  Requires one of the following permissions: MANAGE_ORDERS.
-  """
+  """Look up an order by ID."""
   order(
     """ID of an order."""
     id: ID!
@@ -1054,7 +1050,7 @@ type Query {
   """
   List of the apps.
   
-  Requires one of the following permissions: MANAGE_APPS.
+  Requires one of the following permissions: AUTHENTICATED_STAFF_USER, MANAGE_APPS.
   """
   apps(
     """Filtering options for apps."""
@@ -1077,7 +1073,9 @@ type Query {
   ): AppCountableConnection
 
   """
-  Look up an app by ID. If ID is not provided, return the currently authenticated app. Requires one of the following permissions: AuthorizationFilters.OWNER, AppPermission.MANAGE_APPS.
+  Look up an app by ID. If ID is not provided, return the currently authenticated app.
+  
+  Requires one of the following permissions: AUTHENTICATED_STAFF_USER AUTHENTICATED_APP. The authenticated app has access to its resources. Fetching different apps requires MANAGE_APPS permission.
   """
   app(
     """ID of the app."""
@@ -1318,6 +1316,18 @@ enum WebhookEventTypeEnum {
   """All the events."""
   ANY_EVENTS
 
+  """A new app installed."""
+  APP_INSTALLED
+
+  """An app updated."""
+  APP_UPDATED
+
+  """An app deleted."""
+  APP_DELETED
+
+  """An app status is changed."""
+  APP_STATUS_CHANGED
+
   """A new category created."""
   CATEGORY_CREATED
 
@@ -1350,6 +1360,24 @@ enum WebhookEventTypeEnum {
 
   """A gift card status is changed."""
   GIFT_CARD_STATUS_CHANGED
+
+  """A new menu created."""
+  MENU_CREATED
+
+  """A menu is updated."""
+  MENU_UPDATED
+
+  """A menu is deleted."""
+  MENU_DELETED
+
+  """A new menu item created."""
+  MENU_ITEM_CREATED
+
+  """A menu item is updated."""
+  MENU_ITEM_UPDATED
+
+  """A menu item is deleted."""
+  MENU_ITEM_DELETED
 
   """A new order is placed."""
   ORDER_CREATED
@@ -1466,8 +1494,30 @@ enum WebhookEventTypeEnum {
 
   """A shipping zone is deleted."""
   SHIPPING_ZONE_DELETED
+  TRANSACTION_ACTION_REQUEST
   TRANSLATION_CREATED
   TRANSLATION_UPDATED
+
+  """A new warehouse created."""
+  WAREHOUSE_CREATED
+
+  """A warehouse is updated."""
+  WAREHOUSE_UPDATED
+
+  """A warehouse is deleted."""
+  WAREHOUSE_DELETED
+
+  """A new voucher created."""
+  VOUCHER_CREATED
+
+  """A voucher is updated."""
+  VOUCHER_UPDATED
+
+  """A voucher is deleted."""
+  VOUCHER_DELETED
+
+  """An observability event is created."""
+  OBSERVABILITY
   PAYMENT_AUTHORIZE
   PAYMENT_CAPTURE
   PAYMENT_CONFIRM
@@ -1521,6 +1571,18 @@ enum WebhookEventTypeAsyncEnum {
   """All the events."""
   ANY_EVENTS
 
+  """A new app installed."""
+  APP_INSTALLED
+
+  """An app updated."""
+  APP_UPDATED
+
+  """An app deleted."""
+  APP_DELETED
+
+  """An app status is changed."""
+  APP_STATUS_CHANGED
+
   """A new category created."""
   CATEGORY_CREATED
 
@@ -1553,6 +1615,24 @@ enum WebhookEventTypeAsyncEnum {
 
   """A gift card status is changed."""
   GIFT_CARD_STATUS_CHANGED
+
+  """A new menu created."""
+  MENU_CREATED
+
+  """A menu is updated."""
+  MENU_UPDATED
+
+  """A menu is deleted."""
+  MENU_DELETED
+
+  """A new menu item created."""
+  MENU_ITEM_CREATED
+
+  """A menu item is updated."""
+  MENU_ITEM_UPDATED
+
+  """A menu item is deleted."""
+  MENU_ITEM_DELETED
 
   """A new order is placed."""
   ORDER_CREATED
@@ -1669,8 +1749,30 @@ enum WebhookEventTypeAsyncEnum {
 
   """A shipping zone is deleted."""
   SHIPPING_ZONE_DELETED
+  TRANSACTION_ACTION_REQUEST
   TRANSLATION_CREATED
   TRANSLATION_UPDATED
+
+  """A new warehouse created."""
+  WAREHOUSE_CREATED
+
+  """A warehouse is updated."""
+  WAREHOUSE_UPDATED
+
+  """A warehouse is deleted."""
+  WAREHOUSE_DELETED
+
+  """A new voucher created."""
+  VOUCHER_CREATED
+
+  """A voucher is updated."""
+  VOUCHER_UPDATED
+
+  """A voucher is deleted."""
+  VOUCHER_DELETED
+
+  """An observability event is created."""
+  OBSERVABILITY
 }
 
 """Represents app data."""
@@ -1738,10 +1840,18 @@ type App implements Node & ObjectWithMetadata {
   """Type of the app."""
   type: AppTypeEnum
 
-  """Last 4 characters of the tokens."""
+  """
+  Last 4 characters of the tokens.
+  
+  Requires one of the following permissions: MANAGE_APPS, OWNER.
+  """
   tokens: [AppToken!]
 
-  """List of webhooks assigned to this app."""
+  """
+  List of webhooks assigned to this app.
+  
+  Requires one of the following permissions: MANAGE_APPS, OWNER.
+  """
   webhooks: [Webhook!]
 
   """Description of this app."""
@@ -1865,6 +1975,7 @@ enum PermissionEnum {
   MANAGE_STAFF
   IMPERSONATE_USER
   MANAGE_APPS
+  MANAGE_OBSERVABILITY
   MANAGE_CHANNELS
   MANAGE_DISCOUNTS
   MANAGE_PLUGINS
@@ -1950,6 +2061,9 @@ enum AppExtensionMountEnum {
   NAVIGATION_DISCOUNTS
   NAVIGATION_TRANSLATIONS
   NAVIGATION_PAGES
+  ORDER_DETAILS_MORE_ACTIONS
+  ORDER_OVERVIEW_CREATE
+  ORDER_OVERVIEW_MORE_ACTIONS
 }
 
 """
@@ -2125,6 +2239,10 @@ scalar JSONString
 
 """An enumeration."""
 enum WebhookSampleEventTypeEnum {
+  APP_INSTALLED
+  APP_UPDATED
+  APP_DELETED
+  APP_STATUS_CHANGED
   CATEGORY_CREATED
   CATEGORY_UPDATED
   CATEGORY_DELETED
@@ -2136,6 +2254,12 @@ enum WebhookSampleEventTypeEnum {
   GIFT_CARD_UPDATED
   GIFT_CARD_DELETED
   GIFT_CARD_STATUS_CHANGED
+  MENU_CREATED
+  MENU_UPDATED
+  MENU_DELETED
+  MENU_ITEM_CREATED
+  MENU_ITEM_UPDATED
+  MENU_ITEM_DELETED
   ORDER_CREATED
   ORDER_CONFIRMED
   ORDER_FULLY_PAID
@@ -2178,8 +2302,16 @@ enum WebhookSampleEventTypeEnum {
   SHIPPING_ZONE_CREATED
   SHIPPING_ZONE_UPDATED
   SHIPPING_ZONE_DELETED
+  TRANSACTION_ACTION_REQUEST
   TRANSLATION_CREATED
   TRANSLATION_UPDATED
+  WAREHOUSE_CREATED
+  WAREHOUSE_UPDATED
+  WAREHOUSE_DELETED
+  VOUCHER_CREATED
+  VOUCHER_UPDATED
+  VOUCHER_DELETED
+  OBSERVABILITY
 }
 
 """Represents warehouse."""
@@ -2492,7 +2624,11 @@ type ShippingMethodType implements Node & ObjectWithMetadata {
   """Shipping method name."""
   name: String!
 
-  """Shipping method description."""
+  """
+  Shipping method description.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   description: JSONString
 
   """Type of the shipping method."""
@@ -2566,6 +2702,12 @@ type ShippingMethodTranslation implements Node {
   """Translation language."""
   language: LanguageDisplay!
   name: String
+
+  """
+  Translated description of the shipping method.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   description: JSONString
 }
 
@@ -3482,6 +3624,12 @@ type Product implements Node & ObjectWithMetadata {
   seoTitle: String
   seoDescription: String
   name: String!
+
+  """
+  Description of the product.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   description: JSONString
   productType: ProductType!
   slug: String!
@@ -3498,7 +3646,11 @@ type Product implements Node & ObjectWithMetadata {
   """
   channel: String
 
-  """Description of the product (JSON)."""
+  """
+  Description of the product.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   descriptionJson: JSONString @deprecated(reason: "This field will be removed in Saleor 4.0. Use the `description` field instead.")
 
   """The main thumbnail for a product."""
@@ -3830,32 +3982,32 @@ type Attribute implements Node & ObjectWithMetadata {
   ): AttributeValueCountableConnection
 
   """
-  Whether the attribute requires values to be passed or not. Requires one of the following permissions: PagePermissions.MANAGE_PAGES, PageTypePermissions.MANAGE_PAGE_TYPES_AND_ATTRIBUTES, ProductPermissions.MANAGE_PRODUCTS, ProductTypePermissions.MANAGE_PRODUCT_TYPES_AND_ATTRIBUTES.
+  Whether the attribute requires values to be passed or not. Requires one of the following permissions: MANAGE_PAGES, MANAGE_PAGE_TYPES_AND_ATTRIBUTES, MANAGE_PRODUCTS, MANAGE_PRODUCT_TYPES_AND_ATTRIBUTES.
   """
   valueRequired: Boolean!
 
   """
-  Whether the attribute should be visible or not in storefront. Requires one of the following permissions: PagePermissions.MANAGE_PAGES, PageTypePermissions.MANAGE_PAGE_TYPES_AND_ATTRIBUTES, ProductPermissions.MANAGE_PRODUCTS, ProductTypePermissions.MANAGE_PRODUCT_TYPES_AND_ATTRIBUTES.
+  Whether the attribute should be visible or not in storefront. Requires one of the following permissions: MANAGE_PAGES, MANAGE_PAGE_TYPES_AND_ATTRIBUTES, MANAGE_PRODUCTS, MANAGE_PRODUCT_TYPES_AND_ATTRIBUTES.
   """
   visibleInStorefront: Boolean!
 
   """
-  Whether the attribute can be filtered in storefront. Requires one of the following permissions: PagePermissions.MANAGE_PAGES, PageTypePermissions.MANAGE_PAGE_TYPES_AND_ATTRIBUTES, ProductPermissions.MANAGE_PRODUCTS, ProductTypePermissions.MANAGE_PRODUCT_TYPES_AND_ATTRIBUTES.
+  Whether the attribute can be filtered in storefront. Requires one of the following permissions: MANAGE_PAGES, MANAGE_PAGE_TYPES_AND_ATTRIBUTES, MANAGE_PRODUCTS, MANAGE_PRODUCT_TYPES_AND_ATTRIBUTES.
   """
   filterableInStorefront: Boolean!
 
   """
-  Whether the attribute can be filtered in dashboard. Requires one of the following permissions: PagePermissions.MANAGE_PAGES, PageTypePermissions.MANAGE_PAGE_TYPES_AND_ATTRIBUTES, ProductPermissions.MANAGE_PRODUCTS, ProductTypePermissions.MANAGE_PRODUCT_TYPES_AND_ATTRIBUTES.
+  Whether the attribute can be filtered in dashboard. Requires one of the following permissions: MANAGE_PAGES, MANAGE_PAGE_TYPES_AND_ATTRIBUTES, MANAGE_PRODUCTS, MANAGE_PRODUCT_TYPES_AND_ATTRIBUTES.
   """
   filterableInDashboard: Boolean!
 
   """
-  Whether the attribute can be displayed in the admin product list. Requires one of the following permissions: PagePermissions.MANAGE_PAGES, PageTypePermissions.MANAGE_PAGE_TYPES_AND_ATTRIBUTES, ProductPermissions.MANAGE_PRODUCTS, ProductTypePermissions.MANAGE_PRODUCT_TYPES_AND_ATTRIBUTES.
+  Whether the attribute can be displayed in the admin product list. Requires one of the following permissions: MANAGE_PAGES, MANAGE_PAGE_TYPES_AND_ATTRIBUTES, MANAGE_PRODUCTS, MANAGE_PRODUCT_TYPES_AND_ATTRIBUTES.
   """
   availableInGrid: Boolean!
 
   """
-  The position of the attribute in the storefront navigation (0 by default). Requires one of the following permissions: PagePermissions.MANAGE_PAGES, PageTypePermissions.MANAGE_PAGE_TYPES_AND_ATTRIBUTES, ProductPermissions.MANAGE_PRODUCTS, ProductTypePermissions.MANAGE_PRODUCT_TYPES_AND_ATTRIBUTES.
+  The position of the attribute in the storefront navigation (0 by default). Requires one of the following permissions: MANAGE_PAGES, MANAGE_PAGE_TYPES_AND_ATTRIBUTES, MANAGE_PRODUCTS, MANAGE_PRODUCT_TYPES_AND_ATTRIBUTES.
   """
   storefrontSearchPosition: Int!
 
@@ -4002,7 +4154,11 @@ type AttributeValue implements Node {
   """Represents file URL and content type (if attribute value is a file)."""
   file: File
 
-  """Represents the text (JSON) of the attribute value."""
+  """
+  Represents the text of the attribute value, includes formatting.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   richText: JSONString
 
   """Represents the boolean value of the attribute value."""
@@ -4021,6 +4177,12 @@ type AttributeValueTranslation implements Node {
   """Translation language."""
   language: LanguageDisplay!
   name: String!
+
+  """
+  Attribute value.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   richText: JSONString
 }
 
@@ -4207,12 +4369,22 @@ type Category implements Node & ObjectWithMetadata {
   seoTitle: String
   seoDescription: String
   name: String!
+
+  """
+  Description of the category.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   description: JSONString
   slug: String!
   parent: Category
   level: Int!
 
-  """Description of the category (JSON)."""
+  """
+  Description of the category.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   descriptionJson: JSONString @deprecated(reason: "This field will be removed in Saleor 4.0. Use the `description` field instead.")
 
   """List of ancestors of the category."""
@@ -4310,9 +4482,19 @@ type CategoryTranslation implements Node {
   seoTitle: String
   seoDescription: String
   name: String
+
+  """
+  Translated description of the category.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   description: JSONString
 
-  """Translated description of the product (JSON)."""
+  """
+  Translated description of the category.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   descriptionJson: JSONString @deprecated(reason: "This field will be removed in Saleor 4.0. Use the `description` field instead.")
 }
 
@@ -5176,6 +5358,12 @@ type Collection implements Node & ObjectWithMetadata {
   seoTitle: String
   seoDescription: String
   name: String!
+
+  """
+  Description of the collection.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   description: JSONString
   slug: String!
 
@@ -5184,7 +5372,11 @@ type Collection implements Node & ObjectWithMetadata {
   """
   channel: String
 
-  """Description of the collection (JSON)."""
+  """
+  Description of the collection.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   descriptionJson: JSONString @deprecated(reason: "This field will be removed in Saleor 4.0. Use the `description` field instead.")
 
   """List of products in this collection."""
@@ -5346,10 +5538,18 @@ enum ProductOrderField {
   """
   RANK
 
-  """Sort products by price."""
+  """
+  Sort products by price.
+  
+  This option requires a channel filter to work as the values can vary between channels.
+  """
   PRICE
 
-  """Sort products by a minimal price of a product's variant."""
+  """
+  Sort products by a minimal price of a product's variant.
+  
+  This option requires a channel filter to work as the values can vary between channels.
+  """
   MINIMAL_PRICE
 
   """Sort products by update date."""
@@ -5361,13 +5561,25 @@ enum ProductOrderField {
   """Sort products by type."""
   TYPE
 
-  """Sort products by publication status."""
+  """
+  Sort products by publication status.
+  
+  This option requires a channel filter to work as the values can vary between channels.
+  """
   PUBLISHED
 
-  """Sort products by publication date."""
+  """
+  Sort products by publication date.
+  
+  This option requires a channel filter to work as the values can vary between channels.
+  """
   PUBLICATION_DATE
 
-  """Sort products by publication date."""
+  """
+  Sort products by publication date.
+  
+  This option requires a channel filter to work as the values can vary between channels.
+  """
   PUBLISHED_AT
 
   """Sort products by update date."""
@@ -5375,6 +5587,8 @@ enum ProductOrderField {
 
   """
   Sort products by collection. Note: This option is available only for the `Collection.products` query.
+  
+  This option requires a channel filter to work as the values can vary between channels.
   """
   COLLECTION
 
@@ -5390,9 +5604,19 @@ type CollectionTranslation implements Node {
   seoTitle: String
   seoDescription: String
   name: String
+
+  """
+  Translated description of the collection.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   description: JSONString
 
-  """Translated description of the product (JSON)."""
+  """
+  Translated description of the collection.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   descriptionJson: JSONString @deprecated(reason: "This field will be removed in Saleor 4.0. Use the `description` field instead.")
 }
 
@@ -5419,9 +5643,19 @@ type ProductTranslation implements Node {
   seoTitle: String
   seoDescription: String
   name: String
+
+  """
+  Translated description of the product.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   description: JSONString
 
-  """Translated description of the product (JSON)."""
+  """
+  Translated description of the product.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   descriptionJson: JSONString @deprecated(reason: "This field will be removed in Saleor 4.0. Use the `description` field instead.")
 }
 
@@ -5486,9 +5720,19 @@ type ProductTranslatableContent implements Node {
   seoTitle: String
   seoDescription: String
   name: String!
+
+  """
+  Description of the product.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   description: JSONString
 
-  """Description of the product (JSON)."""
+  """
+  Description of the product.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   descriptionJson: JSONString @deprecated(reason: "This field will be removed in Saleor 4.0. Use the `description` field instead.")
 
   """Returns translated product fields for the given language code."""
@@ -5507,6 +5751,12 @@ type ProductTranslatableContent implements Node {
 type AttributeValueTranslatableContent implements Node {
   id: ID!
   name: String!
+
+  """
+  Attribute value.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   richText: JSONString
 
   """Returns translated attribute value fields for the given language code."""
@@ -5524,9 +5774,19 @@ type CollectionTranslatableContent implements Node {
   seoTitle: String
   seoDescription: String
   name: String!
+
+  """
+  Description of the collection.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   description: JSONString
 
-  """Description of the collection (JSON)."""
+  """
+  Description of the collection.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   descriptionJson: JSONString @deprecated(reason: "This field will be removed in Saleor 4.0. Use the `description` field instead.")
 
   """Returns translated collection fields for the given language code."""
@@ -5544,9 +5804,19 @@ type CategoryTranslatableContent implements Node {
   seoTitle: String
   seoDescription: String
   name: String!
+
+  """
+  Description of the category.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   description: JSONString
 
-  """Description of the category (JSON)."""
+  """
+  Description of the category.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   descriptionJson: JSONString @deprecated(reason: "This field will be removed in Saleor 4.0. Use the `description` field instead.")
 
   """Returns translated category fields for the given language code."""
@@ -5595,9 +5865,19 @@ type PageTranslatableContent implements Node {
   seoTitle: String
   seoDescription: String
   title: String!
+
+  """
+  Content of the page.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   content: JSONString
 
-  """Content of the page (JSON)."""
+  """
+  Content of the page.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   contentJson: JSONString @deprecated(reason: "This field will be removed in Saleor 4.0. Use the `content` field instead.")
 
   """Returns translated page fields for the given language code."""
@@ -5623,9 +5903,19 @@ type PageTranslation implements Node {
   seoTitle: String
   seoDescription: String
   title: String
+
+  """
+  Translated content of the page.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   content: JSONString
 
-  """Translated description of the page (JSON)."""
+  """
+  Translated description of the page.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   contentJson: JSONString @deprecated(reason: "This field will be removed in Saleor 4.0. Use the `content` field instead.")
 }
 
@@ -5684,7 +5974,11 @@ type Page implements Node & ObjectWithMetadata {
   seoDescription: String
   title: String!
 
-  """Content of the page (JSON)."""
+  """
+  Content of the page.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   content: JSONString
   publicationDate: Date @deprecated(reason: "This field will be removed in Saleor 4.0. Use the `publishedAt` field to fetch the publication date.")
 
@@ -5699,7 +5993,11 @@ type Page implements Node & ObjectWithMetadata {
   pageType: PageType!
   created: DateTime!
 
-  """Content of the page (JSON)."""
+  """
+  Content of the page.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   contentJson: JSONString! @deprecated(reason: "This field will be removed in Saleor 4.0. Use the `content` field instead.")
 
   """Returns translated page fields for the given language code."""
@@ -5801,6 +6099,12 @@ type PageType implements Node & ObjectWithMetadata {
 type ShippingMethodTranslatableContent implements Node {
   id: ID!
   name: String!
+
+  """
+  Description of the shipping method.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   description: JSONString
 
   """Returns translated shipping method fields for the given language code."""
@@ -6342,7 +6646,7 @@ type MenuItem implements Node & ObjectWithMetadata {
   collection: Collection
 
   """
-  A page associated with this menu item. Requires one of the following permissions to include unpublished items: PagePermissions.MANAGE_PAGES.
+  A page associated with this menu item. Requires one of the following permissions to include unpublished items: MANAGE_PAGES.
   """
   page: Page
   level: Int!
@@ -6746,7 +7050,11 @@ type ShippingMethod implements Node & ObjectWithMetadata {
   """Shipping method name."""
   name: String!
 
-  """Shipping method description (JSON)."""
+  """
+  Shipping method description.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   description: JSONString
 
   """Maximum delivery days for this shipping method."""
@@ -6917,7 +7225,7 @@ type User implements Node & ObjectWithMetadata {
   note: String
 
   """
-  List of user's orders. Requires one of the following permissions: AccountPermissions.MANAGE_STAFF, AuthorizationFilters.OWNER
+  List of user's orders. Requires one of the following permissions: MANAGE_STAFF, OWNER.
   """
   orders(
     """Return the elements in the list that come before the specified cursor."""
@@ -7099,6 +7407,15 @@ type Checkout implements Node & ObjectWithMetadata {
 
   """Checkout language code."""
   languageCode: LanguageCodeEnum!
+
+  """
+  List of transactions for the checkout. Requires one of the following permissions: MANAGE_CHECKOUTS, HANDLE_PAYMENTS.
+  
+  Added in Saleor 3.4.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  transactions: [TransactionItem!]
 }
 
 """
@@ -7160,7 +7477,7 @@ type GiftCard implements Node & ObjectWithMetadata {
   last4CodeChars: String!
 
   """
-  Gift card code. Can be fetched by a staff member with GiftcardPermissions.MANAGE_GIFT_CARD when gift card wasn't yet used and by the gift card owner.
+  Gift card code. Can be fetched by a staff member with MANAGE_GIFT_CARD when gift card wasn't yet used and by the gift card owner.
   """
   code: String!
   created: DateTime!
@@ -7190,7 +7507,7 @@ type GiftCard implements Node & ObjectWithMetadata {
   
   Note: this API is currently in Feature Preview and can be subject to changes at later point.
   
-  Requires one of the following permissions: AccountPermissions.MANAGE_USERS, AuthorizationFilters.OWNER.
+  Requires one of the following permissions: MANAGE_USERS, OWNER.
   """
   createdByEmail: String
 
@@ -7212,7 +7529,7 @@ type GiftCard implements Node & ObjectWithMetadata {
   
   Note: this API is currently in Feature Preview and can be subject to changes at later point.
   
-  Requires one of the following permissions: AppPermission.MANAGE_APPS, AuthorizationFilters.OWNER.
+  Requires one of the following permissions: MANAGE_APPS, OWNER.
   """
   app: App
 
@@ -7289,12 +7606,12 @@ type GiftCardEvent implements Node {
   type: GiftCardEventsEnum
 
   """
-  User who performed the action. Requires one of the following permissions: AccountPermissions.MANAGE_USERS, AccountPermissions.MANAGE_STAFF, AuthorizationFilters.OWNER.
+  User who performed the action. Requires one of the following permissions: MANAGE_USERS, MANAGE_STAFF, OWNER.
   """
   user: User
 
   """
-  App that performed the action. Requires one of the following permissions: AppPermission.MANAGE_APPS, AuthorizationFilters.OWNER.
+  App that performed the action. Requires one of the following permissions: MANAGE_APPS, OWNER.
   """
   app: App
 
@@ -7379,8 +7696,17 @@ type CheckoutLine implements Node {
   variant: ProductVariant!
   quantity: Int!
 
+  """The unit price of the checkout line, with taxes and discounts."""
+  unitPrice: TaxedMoney!
+
+  """The unit price of the checkout line, without discounts."""
+  undiscountedUnitPrice: Money!
+
   """The sum of the checkout line price, taxes and discounts."""
   totalPrice: TaxedMoney!
+
+  """The sum of the checkout line price, without discounts."""
+  undiscountedTotalPrice: Money!
 
   """Indicates whether the item need to be delivered."""
   requiresShipping: Boolean!
@@ -7394,6 +7720,132 @@ Added in Saleor 3.1.
 Note: this API is currently in Feature Preview and can be subject to changes at later point.
 """
 union DeliveryMethod = Warehouse | ShippingMethod
+
+"""
+Represents a payment transaction.
+
+Added in Saleor 3.4.
+
+Note: this API is currently in Feature Preview and can be subject to changes at later point.
+"""
+type TransactionItem implements Node & ObjectWithMetadata {
+  """The ID of the object."""
+  id: ID!
+
+  """List of private metadata items. Requires staff permissions to access."""
+  privateMetadata: [MetadataItem!]!
+
+  """
+  A single key from private metadata. Requires staff permissions to access.
+  
+  Tip: Use GraphQL aliases to fetch multiple keys.
+  
+  Added in Saleor 3.3.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  privateMetafield(key: String!): String
+
+  """
+  Private metadata. Requires staff permissions to access. Use `keys` to control which fields you want to include. The default is to include everything.
+  
+  Added in Saleor 3.3.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  privateMetafields(keys: [String!]): Metadata
+
+  """List of public metadata items. Can be accessed without permissions."""
+  metadata: [MetadataItem!]!
+
+  """
+  A single key from public metadata.
+  
+  Tip: Use GraphQL aliases to fetch multiple keys.
+  
+  Added in Saleor 3.3.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  metafield(key: String!): String
+
+  """
+  Public metadata. Use `keys` to control which fields you want to include. The default is to include everything.
+  
+  Added in Saleor 3.3.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  metafields(keys: [String!]): Metadata
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+
+  """
+  List of actions that can be performed in the current state of a payment.
+  """
+  actions: [TransactionActionEnum!]!
+
+  """Total amount authorized for this payment."""
+  authorizedAmount: Money!
+
+  """Total amount refunded for this payment."""
+  refundedAmount: Money!
+
+  """Total amount voided for this payment."""
+  voidedAmount: Money!
+
+  """Total amount charged for this payment."""
+  chargedAmount: Money!
+
+  """Status of transaction."""
+  status: String!
+
+  """Type of transaction."""
+  type: String!
+
+  """Reference of transaction."""
+  reference: String!
+
+  """List of all transaction's events."""
+  events: [TransactionEvent!]!
+}
+
+"""
+Represents possible actions on payment transaction.
+
+    The following actions are possible:
+    CHARGE - Represents the charge action.
+    REFUND - Represents a refund action.
+    VOID - Represents a void action.
+"""
+enum TransactionActionEnum {
+  CHARGE
+  REFUND
+  VOID
+}
+
+"""Represents transaction's event."""
+type TransactionEvent implements Node {
+  """The ID of the object."""
+  id: ID!
+  createdAt: DateTime!
+
+  """Status of transaction's event."""
+  status: TransactionStatus!
+
+  """Reference of transaction's event."""
+  reference: String!
+
+  """Name of the transaction's event."""
+  name: String
+}
+
+"""An enumeration."""
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILURE
+}
 
 type GiftCardCountableConnection {
   """Pagination data for this connection."""
@@ -7483,18 +7935,18 @@ type Order implements Node & ObjectWithMetadata {
   status: OrderStatus!
 
   """
-  User who placed the order. This field is set only for orders placed by authenticated users. Requires one of the following permissions: AccountPermissions.MANAGE_USERS, OrderPermissions.MANAGE_ORDERS, AuthorizationFilters.OWNER.
+  User who placed the order. This field is set only for orders placed by authenticated users. Can be fetched for orders created in Saleor 3.2 and later, for other orders requires one of the following permissions: MANAGE_USERS, MANAGE_ORDERS, OWNER.
   """
   user: User
   trackingClientId: String!
 
   """
-  Billing address. Requires one of the following permissions to view the full data: OrderPermissions.MANAGE_ORDERS, AuthorizationFilters.OWNER.
+  Billing address. The full data can be access for orders created in Saleor 3.2 and later, for other orders requires one of the following permissions: MANAGE_ORDERS, OWNER.
   """
   billingAddress: Address
 
   """
-  Shipping address. Requires one of the following permissions to view the full data: OrderPermissions.MANAGE_ORDERS, AuthorizationFilters.OWNER.
+  Shipping address. The full data can be access for orders created in Saleor 3.2 and later, for other orders requires one of the following permissions: MANAGE_ORDERS, OWNER.
   """
   shippingAddress: Address
   shippingMethodName: String
@@ -7528,7 +7980,7 @@ type Order implements Node & ObjectWithMetadata {
   availableCollectionPoints: [Warehouse!]!
 
   """
-  List of order invoices. Requires one of the following permissions: OrderPermissions.MANAGE_ORDERS, AuthorizationFilters.OWNER.
+  List of order invoices. Can be fetched for orders created in Saleor 3.2 and later, for other orders requires one of the following permissions: MANAGE_ORDERS, OWNER.
   """
   invoices: [Invoice!]!
 
@@ -7549,6 +8001,15 @@ type Order implements Node & ObjectWithMetadata {
 
   """User-friendly payment status."""
   paymentStatusDisplay: String!
+
+  """
+  List of transactions for the order. Requires one of the following permissions: MANAGE_ORDERS, HANDLE_PAYMENTS.
+  
+  Added in Saleor 3.4.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  transactions: [TransactionItem!]!
 
   """List of payments for the order."""
   payments: [Payment!]!
@@ -7603,7 +8064,7 @@ type Order implements Node & ObjectWithMetadata {
   totalBalance: Money!
 
   """
-  Email address of the customer. Requires the following permissions to access the full data: OrderPermissions.MANAGE_ORDERS, AuthorizationFilters.OWNER
+  Email address of the customer. The full data can be access for orders created in Saleor 3.2 and later, for other orders requires one of the following permissions: MANAGE_ORDERS, OWNER.
   """
   userEmail: String
 
@@ -8109,7 +8570,7 @@ type OrderEvent implements Node {
   user: User
 
   """
-  App that performed the action. Requires of of the following permissions: AppPermission.MANAGE_APPS, OrderPermissions.MANAGE_ORDERS, AuthorizationFilters.OWNER.
+  App that performed the action. Requires of of the following permissions: MANAGE_APPS, MANAGE_ORDERS, OWNER.
   """
   app: App
 
@@ -8125,7 +8586,7 @@ type OrderEvent implements Node {
   """Amount of money."""
   amount: Float
 
-  """The payment ID from the payment gateway."""
+  """The payment reference from the payment provider."""
   paymentId: String
 
   """The payment gateway of the payment."""
@@ -8166,6 +8627,12 @@ type OrderEvent implements Node {
 
   """The discount applied to the order."""
   discount: OrderEventDiscountObject
+
+  """The status of payment's transaction."""
+  status: TransactionStatus
+
+  """The reference of payment's transaction."""
+  reference: String
 }
 
 """An enumeration."""
@@ -8198,6 +8665,10 @@ enum OrderEventsEnum {
   PAYMENT_REFUNDED
   PAYMENT_VOIDED
   PAYMENT_FAILED
+  TRANSACTION_EVENT
+  TRANSACTION_CAPTURE_REQUESTED
+  TRANSACTION_REFUND_REQUESTED
+  TRANSACTION_VOID_REQUESTED
   INVOICE_REQUESTED
   INVOICE_GENERATED
   INVOICE_UPDATED
@@ -8352,6 +8823,7 @@ enum OrderErrorCode {
   DUPLICATED_INPUT_ITEM
   NOT_AVAILABLE_IN_CHANNEL
   CHANNEL_INACTIVE
+  MISSING_TRANSACTION_ACTION_REQUEST_WEBHOOK
 }
 
 """An enumeration."""
@@ -8609,7 +9081,11 @@ enum CollectionSortField {
   """Sort collections by name."""
   NAME
 
-  """Sort collections by availability."""
+  """
+  Sort collections by availability.
+  
+  This option requires a channel filter to work as the values can vary between channels.
+  """
   AVAILABILITY
 
   """Sort collections by product count."""
@@ -8618,14 +9094,14 @@ enum CollectionSortField {
   """
   Sort collections by publication date.
   
-  DEPRECATED: this field will be removed in Saleor 4.0.
+  This option requires a channel filter to work as the values can vary between channels.
   """
   PUBLICATION_DATE
 
   """
   Sort collections by publication date.
   
-  DEPRECATED: this field will be removed in Saleor 4.0.
+  This option requires a channel filter to work as the values can vary between channels.
   """
   PUBLISHED_AT
 }
@@ -9186,7 +9662,11 @@ enum SaleSortField {
   """Sort sales by end date."""
   END_DATE
 
-  """Sort sales by value."""
+  """
+  Sort sales by value.
+  
+  This option requires a channel filter to work as the values can vary between channels.
+  """
   VALUE
 
   """Sort sales by type."""
@@ -9256,7 +9736,11 @@ enum VoucherSortField {
   """Sort vouchers by end date."""
   END_DATE
 
-  """Sort vouchers by value."""
+  """
+  Sort vouchers by value.
+  
+  This option requires a channel filter to work as the values can vary between channels.
+  """
   VALUE
 
   """Sort vouchers by type."""
@@ -9265,7 +9749,11 @@ enum VoucherSortField {
   """Sort vouchers by usage limit."""
   USAGE_LIMIT
 
-  """Sort vouchers by minimum spent amount."""
+  """
+  Sort vouchers by minimum spent amount.
+  
+  This option requires a channel filter to work as the values can vary between channels.
+  """
   MINIMUM_SPENT_AMOUNT
 }
 
@@ -9306,12 +9794,12 @@ type ExportEvent implements Node {
   type: ExportEventsEnum!
 
   """
-  User who performed the action. Requires one of the following permissions: AuthorizationFilters.OWNER, AccountPermissions.MANAGE_STAFF.
+  User who performed the action. Requires one of the following permissions: OWNER, MANAGE_STAFF.
   """
   user: User
 
   """
-  App which performed the action. Requires one of the following permissions: AuthorizationFilters.OWNER, AppPermission.MANAGE_APPS.
+  App which performed the action. Requires one of the following permissions: OWNER, MANAGE_APPS.
   """
   app: App
 
@@ -10738,6 +11226,64 @@ type Mutation {
     """Fields required to check payment balance."""
     input: PaymentCheckBalanceInput!
   ): PaymentCheckBalance
+
+  """
+  Create transaction for checkout or order. Requires the following permissions: AUTHENTICATED_APP and HANDLE_PAYMENTS.
+  
+  Added in Saleor 3.4.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  transactionCreate(
+    """The ID of the checkout or order."""
+    id: ID!
+
+    """Input data required to create a new transaction object."""
+    transaction: TransactionCreateInput!
+
+    """Data that defines a transaction event."""
+    transactionEvent: TransactionEventInput
+  ): TransactionCreate
+
+  """
+  Create transaction for checkout or order. Requires the following permissions: AUTHENTICATED_APP and HANDLE_PAYMENTS.
+  
+  Added in Saleor 3.4.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  transactionUpdate(
+    """The ID of the transaction."""
+    id: ID!
+
+    """Input data required to create a new transaction object."""
+    transaction: TransactionUpdateInput
+
+    """Data that defines a transaction transaction."""
+    transactionEvent: TransactionEventInput
+  ): TransactionUpdate
+
+  """
+  Request an action for payment transaction.
+  
+  Added in Saleor 3.4.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point. 
+  
+  Requires one of the following permissions: HANDLE_PAYMENTS, MANAGE_ORDERS.
+  """
+  transactionRequestAction(
+    """Determines the action type."""
+    actionType: TransactionActionEnum!
+
+    """
+    Transaction request amount. If empty for refund or capture, maximal possible amount will be used.
+    """
+    amount: PositiveDecimal
+
+    """The ID of the transaction."""
+    id: ID!
+  ): TransactionRequestAction
 
   """
   Creates a new page. 
@@ -12198,13 +12744,11 @@ type Mutation {
   ): CheckoutLanguageCodeUpdate
 
   """
-  Create new order from existing checkout.
+  Create new order from existing checkout. Requires the following permissions: AUTHENTICATED_APP and HANDLE_CHECKOUTS.
   
   Added in Saleor 3.2.
   
-  Note: this API is currently in Feature Preview and can be subject to changes at later point. 
-  
-  Requires one of the following permissions: HANDLE_CHECKOUTS.
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
   """
   orderCreateFromCheckout(
     """ID of a checkout that will be converted to an order."""
@@ -13754,7 +14298,11 @@ type ShippingPriceTranslate {
 input ShippingPriceTranslationInput {
   name: String
 
-  """Translated shipping method description (JSON)."""
+  """
+  Translated shipping method description.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   description: JSONString
 }
 
@@ -14006,7 +14554,11 @@ type CategoryCreate {
 }
 
 input CategoryInput {
-  """Category description (JSON)."""
+  """
+  Category description.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   description: JSONString
 
   """Category name."""
@@ -14087,6 +14639,12 @@ input TranslationInput {
   seoTitle: String
   seoDescription: String
   name: String
+
+  """
+  Translated description.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   description: JSONString
 }
 
@@ -14150,7 +14708,11 @@ input CollectionCreateInput {
   """Slug of the collection."""
   slug: String
 
-  """Description of the collection (JSON)."""
+  """
+  Description of the collection.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   description: JSONString
 
   """Background image file."""
@@ -14251,7 +14813,11 @@ input CollectionInput {
   """Slug of the collection."""
   slug: String
 
-  """Description of the collection (JSON)."""
+  """
+  Description of the collection.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   description: JSONString
 
   """Background image file."""
@@ -14370,7 +14936,11 @@ input ProductCreateInput {
   """List of IDs of collections that the product belongs to."""
   collections: [ID!]
 
-  """Product description (JSON)."""
+  """
+  Product description.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   description: JSONString
 
   """Product name."""
@@ -14473,7 +15043,11 @@ input ProductInput {
   """List of IDs of collections that the product belongs to."""
   collections: [ID!]
 
-  """Product description (JSON)."""
+  """
+  Product description.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   description: JSONString
 
   """Product name."""
@@ -15457,6 +16031,192 @@ input MoneyInput {
 }
 
 """
+Create transaction for checkout or order. Requires the following permissions: AUTHENTICATED_APP and HANDLE_PAYMENTS.
+
+Added in Saleor 3.4.
+
+Note: this API is currently in Feature Preview and can be subject to changes at later point.
+"""
+type TransactionCreate {
+  transaction: TransactionItem
+  errors: [TransactionCreateError!]!
+}
+
+type TransactionCreateError {
+  """
+  Name of a field that caused the error. A value of `null` indicates that the error isn't associated with a particular field.
+  """
+  field: String
+
+  """The error message."""
+  message: String
+
+  """The error code."""
+  code: TransactionCreateErrorCode!
+}
+
+"""An enumeration."""
+enum TransactionCreateErrorCode {
+  INVALID
+  GRAPHQL_ERROR
+  NOT_FOUND
+  INCORRECT_CURRENCY
+  METADATA_KEY_REQUIRED
+}
+
+input TransactionCreateInput {
+  """Status of the transaction."""
+  status: String!
+
+  """Payment type used for this transaction."""
+  type: String!
+
+  """Reference of the transaction."""
+  reference: String
+
+  """List of all possible actions for the transaction"""
+  availableActions: [TransactionActionEnum!]
+
+  """Amount authorized by this transaction."""
+  amountAuthorized: MoneyInput
+
+  """Amount charged by this transaction."""
+  amountCharged: MoneyInput
+
+  """Amount refunded by this transaction."""
+  amountRefunded: MoneyInput
+
+  """Amount voided by this transaction."""
+  amountVoided: MoneyInput
+
+  """Payment public metadata."""
+  metadata: [MetadataInput!]
+
+  """Payment private metadata."""
+  privateMetadata: [MetadataInput!]
+}
+
+input MetadataInput {
+  """Key of a metadata item."""
+  key: String!
+
+  """Value of a metadata item."""
+  value: String!
+}
+
+input TransactionEventInput {
+  """Current status of the payment transaction."""
+  status: TransactionStatus!
+
+  """Reference of the transaction."""
+  reference: String
+
+  """Name of the transaction."""
+  name: String
+}
+
+"""
+Create transaction for checkout or order. Requires the following permissions: AUTHENTICATED_APP and HANDLE_PAYMENTS.
+
+Added in Saleor 3.4.
+
+Note: this API is currently in Feature Preview and can be subject to changes at later point.
+"""
+type TransactionUpdate {
+  transaction: TransactionItem
+  errors: [TransactionUpdateError!]!
+}
+
+type TransactionUpdateError {
+  """
+  Name of a field that caused the error. A value of `null` indicates that the error isn't associated with a particular field.
+  """
+  field: String
+
+  """The error message."""
+  message: String
+
+  """The error code."""
+  code: TransactionUpdateErrorCode!
+}
+
+"""An enumeration."""
+enum TransactionUpdateErrorCode {
+  INVALID
+  GRAPHQL_ERROR
+  NOT_FOUND
+  INCORRECT_CURRENCY
+  METADATA_KEY_REQUIRED
+}
+
+input TransactionUpdateInput {
+  """Status of the transaction."""
+  status: String
+
+  """Payment type used for this transaction."""
+  type: String
+
+  """Reference of the transaction."""
+  reference: String
+
+  """List of all possible actions for the transaction"""
+  availableActions: [TransactionActionEnum!]
+
+  """Amount authorized by this transaction."""
+  amountAuthorized: MoneyInput
+
+  """Amount charged by this transaction."""
+  amountCharged: MoneyInput
+
+  """Amount refunded by this transaction."""
+  amountRefunded: MoneyInput
+
+  """Amount voided by this transaction."""
+  amountVoided: MoneyInput
+
+  """Payment public metadata."""
+  metadata: [MetadataInput!]
+
+  """Payment private metadata."""
+  privateMetadata: [MetadataInput!]
+}
+
+"""
+Request an action for payment transaction.
+
+Added in Saleor 3.4.
+
+Note: this API is currently in Feature Preview and can be subject to changes at later point. 
+
+Requires one of the following permissions: HANDLE_PAYMENTS, MANAGE_ORDERS.
+"""
+type TransactionRequestAction {
+  transaction: TransactionItem
+  errors: [TransactionRequestActionError!]!
+}
+
+type TransactionRequestActionError {
+  """
+  Name of a field that caused the error. A value of `null` indicates that the error isn't associated with a particular field.
+  """
+  field: String
+
+  """The error message."""
+  message: String
+
+  """The error code."""
+  code: TransactionRequestActionErrorCode!
+}
+
+"""An enumeration."""
+enum TransactionRequestActionErrorCode {
+  INVALID
+  GRAPHQL_ERROR
+  NOT_FOUND
+  MISSING_TRANSACTION_ACTION_REQUEST_WEBHOOK
+}
+
+"""
 Creates a new page. 
 
 Requires one of the following permissions: MANAGE_PAGES.
@@ -15504,7 +16264,11 @@ input PageCreateInput {
   """Page title."""
   title: String
 
-  """Page content in JSON format."""
+  """
+  Page content.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   content: JSONString
 
   """List of attributes."""
@@ -15587,7 +16351,11 @@ input PageInput {
   """Page title."""
   title: String
 
-  """Page content in JSON format."""
+  """
+  Page content.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   content: JSONString
 
   """List of attributes."""
@@ -15629,6 +16397,12 @@ input PageTranslationInput {
   seoTitle: String
   seoDescription: String
   title: String
+
+  """
+  Translated page content.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   content: JSONString
 }
 
@@ -16427,14 +17201,6 @@ type UpdateMetadata {
   metadataErrors: [MetadataError!]! @deprecated(reason: "This field will be removed in Saleor 4.0. Use `errors` field instead.")
   errors: [MetadataError!]!
   item: ObjectWithMetadata
-}
-
-input MetadataInput {
-  """Key of a metadata item."""
-  key: String!
-
-  """Value of a metadata item."""
-  value: String!
 }
 
 """
@@ -18072,13 +18838,11 @@ type CheckoutLanguageCodeUpdate {
 }
 
 """
-Create new order from existing checkout.
+Create new order from existing checkout. Requires the following permissions: AUTHENTICATED_APP and HANDLE_CHECKOUTS.
 
 Added in Saleor 3.2.
 
-Note: this API is currently in Feature Preview and can be subject to changes at later point. 
-
-Requires one of the following permissions: HANDLE_CHECKOUTS.
+Note: this API is currently in Feature Preview and can be subject to changes at later point.
 """
 type OrderCreateFromCheckout {
   """Placed order."""
@@ -18344,7 +19108,11 @@ input AttributeValueCreateInput {
   """
   value: String
 
-  """Represents the text (JSON) of the attribute value."""
+  """
+  Represents the text of the attribute value, includes formatting.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   richText: JSONString
 
   """URL of the file attribute. Every time, a new value is created."""
@@ -18425,7 +19193,11 @@ input AttributeValueUpdateInput {
   """
   value: String
 
-  """Represents the text (JSON) of the attribute value."""
+  """
+  Represents the text of the attribute value, includes formatting.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   richText: JSONString
 
   """URL of the file attribute. Every time, a new value is created."""
@@ -18525,6 +19297,12 @@ type AttributeValueTranslate {
 
 input AttributeValueTranslationInput {
   name: String
+
+  """
+  Translated text.
+  
+  Rich text format. For reference see https://editorjs.io/
+  """
   richText: JSONString
 }
 
@@ -19561,744 +20339,21 @@ type Subscription {
   event: Event
 }
 
-union Event = CategoryCreated | CategoryUpdated | CategoryDeleted | ChannelCreated | ChannelUpdated | ChannelDeleted | ChannelStatusChanged | GiftCardCreated | GiftCardUpdated | GiftCardDeleted | GiftCardStatusChanged | OrderCreated | OrderUpdated | OrderConfirmed | OrderFullyPaid | OrderCancelled | OrderFulfilled | DraftOrderCreated | DraftOrderUpdated | DraftOrderDeleted | ProductCreated | ProductUpdated | ProductDeleted | ProductVariantCreated | ProductVariantUpdated | ProductVariantOutOfStock | ProductVariantBackInStock | ProductVariantDeleted | SaleCreated | SaleUpdated | SaleDeleted | InvoiceRequested | InvoiceDeleted | InvoiceSent | FulfillmentCreated | FulfillmentCanceled | CustomerCreated | CustomerUpdated | CollectionCreated | CollectionUpdated | CollectionDeleted | CheckoutCreated | CheckoutUpdated | PageCreated | PageUpdated | PageDeleted | ShippingPriceCreated | ShippingPriceUpdated | ShippingPriceDeleted | ShippingZoneCreated | ShippingZoneUpdated | ShippingZoneDeleted | TranslationCreated | TranslationUpdated
+interface Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
 
-type CategoryCreated {
-  """
-  Look up a category.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  category: Category
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
 }
 
-type CategoryUpdated {
-  """
-  Look up a category.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  category: Category
-}
-
-type CategoryDeleted {
-  """
-  Look up a category.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  category: Category
-}
-
-type ChannelCreated {
-  """
-  Look up a channel.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  channel: Channel
-}
-
-type ChannelUpdated {
-  """
-  Look up a channel.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  channel: Channel
-}
-
-type ChannelDeleted {
-  """
-  Look up a channel.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  channel: Channel
-}
-
-type ChannelStatusChanged {
-  """
-  Look up a channel.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  channel: Channel
-}
-
-type GiftCardCreated {
-  """
-  Look up a gift card.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  giftCard: GiftCard
-}
-
-type GiftCardUpdated {
-  """
-  Look up a gift card.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  giftCard: GiftCard
-}
-
-type GiftCardDeleted {
-  """
-  Look up a gift card.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  giftCard: GiftCard
-}
-
-type GiftCardStatusChanged {
-  """
-  Look up a gift card.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  giftCard: GiftCard
-}
-
-type OrderCreated {
-  """
-  Look up an order.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  order: Order
-}
-
-type OrderUpdated {
-  """
-  Look up an order.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  order: Order
-}
-
-type OrderConfirmed {
-  """
-  Look up an order.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  order: Order
-}
-
-type OrderFullyPaid {
-  """
-  Look up an order.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  order: Order
-}
-
-type OrderCancelled {
-  """
-  Look up an order.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  order: Order
-}
-
-type OrderFulfilled {
-  """
-  Look up an order.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  order: Order
-}
-
-type DraftOrderCreated {
-  """
-  Look up an order.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  order: Order
-}
-
-type DraftOrderUpdated {
-  """
-  Look up an order.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  order: Order
-}
-
-type DraftOrderDeleted {
-  """
-  Look up an order.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  order: Order
-}
-
-type ProductCreated {
-  """
-  Look up a product.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  product(
-    """Slug of a channel for which the data should be returned."""
-    channel: String
-  ): Product
-
-  """
-  Look up a category.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  category: Category
-}
-
-type ProductUpdated {
-  """
-  Look up a product.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  product(
-    """Slug of a channel for which the data should be returned."""
-    channel: String
-  ): Product
-
-  """
-  Look up a category.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  category: Category
-}
-
-type ProductDeleted {
-  """
-  Look up a product.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  product(
-    """Slug of a channel for which the data should be returned."""
-    channel: String
-  ): Product
-
-  """
-  Look up a category.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  category: Category
-}
-
-type ProductVariantCreated {
-  """
-  Look up a product variant.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  productVariant(
-    """Slug of a channel for which the data should be returned."""
-    channel: String
-  ): ProductVariant
-}
-
-type ProductVariantUpdated {
-  """
-  Look up a product variant.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  productVariant(
-    """Slug of a channel for which the data should be returned."""
-    channel: String
-  ): ProductVariant
-}
-
-type ProductVariantOutOfStock {
-  """
-  Look up a product variant.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  productVariant(
-    """Slug of a channel for which the data should be returned."""
-    channel: String
-  ): ProductVariant
-
-  """
-  Look up a warehouse.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  warehouse: Warehouse
-}
-
-type ProductVariantBackInStock {
-  """
-  Look up a product variant.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  productVariant(
-    """Slug of a channel for which the data should be returned."""
-    channel: String
-  ): ProductVariant
-
-  """
-  Look up a warehouse.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  warehouse: Warehouse
-}
-
-type ProductVariantDeleted {
-  """
-  Look up a product variant.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  productVariant(
-    """Slug of a channel for which the data should be returned."""
-    channel: String
-  ): ProductVariant
-}
-
-type SaleCreated {
-  """
-  Look up a sale.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  sale(
-    """Slug of a channel for which the data should be returned."""
-    channel: String
-  ): Sale
-}
-
-type SaleUpdated {
-  """
-  Look up a sale.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  sale(
-    """Slug of a channel for which the data should be returned."""
-    channel: String
-  ): Sale
-}
-
-type SaleDeleted {
-  """
-  Look up a sale.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  sale(
-    """Slug of a channel for which the data should be returned."""
-    channel: String
-  ): Sale
-}
-
-type InvoiceRequested {
-  """
-  Look up an Invoice.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  invoice: Invoice
-}
-
-type InvoiceDeleted {
-  """
-  Look up an Invoice.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  invoice: Invoice
-}
-
-type InvoiceSent {
-  """
-  Look up an Invoice.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  invoice: Invoice
-}
-
-type FulfillmentCreated {
-  """
-  Look up a Fulfillment.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  fulfillment: Fulfillment
-}
-
-type FulfillmentCanceled {
-  """
-  Look up a Fulfillment.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  fulfillment: Fulfillment
-}
-
-type CustomerCreated {
-  """
-  Look up a user.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  user: User
-}
-
-type CustomerUpdated {
-  """
-  Look up a user.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  user: User
-}
-
-type CollectionCreated {
-  """
-  Look up a collection.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  collection(
-    """Slug of a channel for which the data should be returned."""
-    channel: String
-  ): Collection
-}
-
-type CollectionUpdated {
-  """
-  Look up a collection.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  collection(
-    """Slug of a channel for which the data should be returned."""
-    channel: String
-  ): Collection
-}
-
-type CollectionDeleted {
-  """
-  Look up a collection.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  collection(
-    """Slug of a channel for which the data should be returned."""
-    channel: String
-  ): Collection
-}
-
-type CheckoutCreated {
-  """
-  Look up a Checkout.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  checkout: Checkout
-}
-
-type CheckoutUpdated {
-  """
-  Look up a Checkout.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  checkout: Checkout
-}
-
-type PageCreated {
-  """
-  Look up a page.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  page: Page
-}
-
-type PageUpdated {
-  """
-  Look up a page.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  page: Page
-}
-
-type PageDeleted {
-  """
-  Look up a page.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  page: Page
-}
-
-type ShippingPriceCreated {
-  """
-  Look up a shipping method.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  shippingMethod(
-    """Slug of a channel for which the data should be returned."""
-    channel: String
-  ): ShippingMethodType
-
-  """
-  Look up a shipping zone.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  shippingZone(
-    """Slug of a channel for which the data should be returned."""
-    channel: String
-  ): ShippingZone
-}
-
-type ShippingPriceUpdated {
-  """
-  Look up a shipping method.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  shippingMethod(
-    """Slug of a channel for which the data should be returned."""
-    channel: String
-  ): ShippingMethodType
-
-  """
-  Look up a shipping zone.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  shippingZone(
-    """Slug of a channel for which the data should be returned."""
-    channel: String
-  ): ShippingZone
-}
-
-type ShippingPriceDeleted {
-  """
-  Look up a shipping method.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  shippingMethod(
-    """Slug of a channel for which the data should be returned."""
-    channel: String
-  ): ShippingMethodType
-
-  """
-  Look up a shipping zone.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  shippingZone(
-    """Slug of a channel for which the data should be returned."""
-    channel: String
-  ): ShippingZone
-}
-
-type ShippingZoneCreated {
-  """
-  Look up a shipping zone.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  shippingZone(
-    """Slug of a channel for which the data should be returned."""
-    channel: String
-  ): ShippingZone
-}
-
-type ShippingZoneUpdated {
-  """
-  Look up a shipping zone.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  shippingZone(
-    """Slug of a channel for which the data should be returned."""
-    channel: String
-  ): ShippingZone
-}
-
-type ShippingZoneDeleted {
-  """
-  Look up a shipping zone.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  shippingZone(
-    """Slug of a channel for which the data should be returned."""
-    channel: String
-  ): ShippingZone
-}
-
-type TranslationCreated {
-  """
-  Look up a translation.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  translation: TranslationTypes
-}
-
-union TranslationTypes = ProductTranslation | CollectionTranslation | CategoryTranslation | AttributeTranslation | AttributeValueTranslation | ProductVariantTranslation | PageTranslation | ShippingMethodTranslation | SaleTranslation | VoucherTranslation | MenuItemTranslation
-
-type TranslationUpdated {
-  """
-  Look up a translation.
-  
-  Added in Saleor 3.2.
-  
-  Note: this API is currently in Feature Preview and can be subject to changes at later point.
-  """
-  translation: TranslationTypes
-}
+union IssuingPrincipal = App | User
 
 """An enumeration."""
 enum DistanceUnitsEnum {
@@ -20335,6 +20390,1844 @@ enum VolumeUnitsEnum {
   FL_OZ
   ACRE_IN
   ACRE_FT
+}
+
+type AppInstalled implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a app.
+  
+  Added in Saleor 3.4.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  app: App
+}
+
+type AppUpdated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a app.
+  
+  Added in Saleor 3.4.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  app: App
+}
+
+type AppDeleted implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a app.
+  
+  Added in Saleor 3.4.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  app: App
+}
+
+type AppStatusChanged implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a app.
+  
+  Added in Saleor 3.4.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  app: App
+}
+
+type CategoryCreated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a category.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  category: Category
+}
+
+type CategoryUpdated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a category.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  category: Category
+}
+
+type CategoryDeleted implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a category.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  category: Category
+}
+
+type ChannelCreated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a channel.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  channel: Channel
+}
+
+type ChannelUpdated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a channel.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  channel: Channel
+}
+
+type ChannelDeleted implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a channel.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  channel: Channel
+}
+
+type ChannelStatusChanged implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a channel.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  channel: Channel
+}
+
+type GiftCardCreated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a gift card.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  giftCard: GiftCard
+}
+
+type GiftCardUpdated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a gift card.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  giftCard: GiftCard
+}
+
+type GiftCardDeleted implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a gift card.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  giftCard: GiftCard
+}
+
+type GiftCardStatusChanged implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a gift card.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  giftCard: GiftCard
+}
+
+type MenuCreated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a menu.
+  
+  Added in Saleor 3.4.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  menu(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): Menu
+}
+
+type MenuUpdated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a menu.
+  
+  Added in Saleor 3.4.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  menu(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): Menu
+}
+
+type MenuDeleted implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a menu.
+  
+  Added in Saleor 3.4.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  menu(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): Menu
+}
+
+type MenuItemCreated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a menu item.
+  
+  Added in Saleor 3.4.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  menuItem(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): MenuItem
+}
+
+type MenuItemUpdated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a menu item.
+  
+  Added in Saleor 3.4.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  menuItem(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): MenuItem
+}
+
+type MenuItemDeleted implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a menu item.
+  
+  Added in Saleor 3.4.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  menuItem(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): MenuItem
+}
+
+type OrderCreated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up an order.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  order: Order
+}
+
+type OrderUpdated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up an order.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  order: Order
+}
+
+type OrderConfirmed implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up an order.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  order: Order
+}
+
+type OrderFullyPaid implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up an order.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  order: Order
+}
+
+type OrderCancelled implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up an order.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  order: Order
+}
+
+type OrderFulfilled implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up an order.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  order: Order
+}
+
+type DraftOrderCreated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up an order.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  order: Order
+}
+
+type DraftOrderUpdated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up an order.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  order: Order
+}
+
+type DraftOrderDeleted implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up an order.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  order: Order
+}
+
+type ProductCreated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a product.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  product(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): Product
+
+  """
+  Look up a category.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  category: Category
+}
+
+type ProductUpdated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a product.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  product(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): Product
+
+  """
+  Look up a category.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  category: Category
+}
+
+type ProductDeleted implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a product.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  product(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): Product
+
+  """
+  Look up a category.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  category: Category
+}
+
+type ProductVariantCreated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a product variant.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  productVariant(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): ProductVariant
+}
+
+type ProductVariantUpdated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a product variant.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  productVariant(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): ProductVariant
+}
+
+type ProductVariantOutOfStock implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a product variant.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  productVariant(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): ProductVariant
+
+  """
+  Look up a warehouse.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  warehouse: Warehouse
+}
+
+type ProductVariantBackInStock implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a product variant.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  productVariant(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): ProductVariant
+
+  """
+  Look up a warehouse.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  warehouse: Warehouse
+}
+
+type ProductVariantDeleted implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a product variant.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  productVariant(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): ProductVariant
+}
+
+type SaleCreated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a sale.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  sale(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): Sale
+}
+
+type SaleUpdated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a sale.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  sale(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): Sale
+}
+
+type SaleDeleted implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a sale.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  sale(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): Sale
+}
+
+type InvoiceRequested implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up an Invoice.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  invoice: Invoice
+}
+
+type InvoiceDeleted implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up an Invoice.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  invoice: Invoice
+}
+
+type InvoiceSent implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up an Invoice.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  invoice: Invoice
+}
+
+type FulfillmentCreated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a Fulfillment.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  fulfillment: Fulfillment
+
+  """
+  Order connected with looked up fulfillment.
+  
+  Added in Saleor 3.4.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  order: Order
+}
+
+type FulfillmentCanceled implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a Fulfillment.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  fulfillment: Fulfillment
+
+  """
+  Order connected with looked up fulfillment.
+  
+  Added in Saleor 3.4.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  order: Order
+}
+
+type CustomerCreated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a user.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  user: User
+}
+
+type CustomerUpdated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a user.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  user: User
+}
+
+type CollectionCreated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a collection.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  collection(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): Collection
+}
+
+type CollectionUpdated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a collection.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  collection(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): Collection
+}
+
+type CollectionDeleted implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a collection.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  collection(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): Collection
+}
+
+type CheckoutCreated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a Checkout.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  checkout: Checkout
+}
+
+type CheckoutUpdated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a Checkout.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  checkout: Checkout
+}
+
+type PageCreated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a page.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  page: Page
+}
+
+type PageUpdated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a page.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  page: Page
+}
+
+type PageDeleted implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a page.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  page: Page
+}
+
+type ShippingPriceCreated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a shipping method.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  shippingMethod(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): ShippingMethodType
+
+  """
+  Look up a shipping zone.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  shippingZone(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): ShippingZone
+}
+
+type ShippingPriceUpdated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a shipping method.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  shippingMethod(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): ShippingMethodType
+
+  """
+  Look up a shipping zone.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  shippingZone(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): ShippingZone
+}
+
+type ShippingPriceDeleted implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a shipping method.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  shippingMethod(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): ShippingMethodType
+
+  """
+  Look up a shipping zone.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  shippingZone(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): ShippingZone
+}
+
+type ShippingZoneCreated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a shipping zone.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  shippingZone(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): ShippingZone
+}
+
+type ShippingZoneUpdated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a shipping zone.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  shippingZone(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): ShippingZone
+}
+
+type ShippingZoneDeleted implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a shipping zone.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  shippingZone(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): ShippingZone
+}
+
+type TransactionActionRequest implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a transaction.
+  
+  Added in Saleor 3.4.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  transaction: TransactionItem
+
+  """
+  Requested action data.
+  
+  Added in Saleor 3.4.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  action: TransactionAction!
+}
+
+type TransactionAction {
+  """Determines the action type."""
+  actionType: TransactionActionEnum!
+
+  """Transaction request amount. Null when action type is VOID."""
+  amount: PositiveDecimal
+}
+
+type TranslationCreated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a translation.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  translation: TranslationTypes
+}
+
+union TranslationTypes = ProductTranslation | CollectionTranslation | CategoryTranslation | AttributeTranslation | AttributeValueTranslation | ProductVariantTranslation | PageTranslation | ShippingMethodTranslation | SaleTranslation | VoucherTranslation | MenuItemTranslation
+
+type TranslationUpdated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a translation.
+  
+  Added in Saleor 3.2.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  translation: TranslationTypes
+}
+
+type VoucherCreated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a voucher.
+  
+  Added in Saleor 3.4.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  voucher(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): Voucher
+}
+
+type VoucherUpdated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a voucher.
+  
+  Added in Saleor 3.4.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  voucher(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): Voucher
+}
+
+type VoucherDeleted implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a voucher.
+  
+  Added in Saleor 3.4.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  voucher(
+    """Slug of a channel for which the data should be returned."""
+    channel: String
+  ): Voucher
+}
+
+type WarehouseCreated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a warehouse.
+  
+  Added in Saleor 3.4.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  warehouse: Warehouse
+}
+
+type WarehouseUpdated implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a warehouse.
+  
+  Added in Saleor 3.4.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  warehouse: Warehouse
+}
+
+type WarehouseDeleted implements Event {
+  """Time of generating the event."""
+  issuedAt: DateTime
+
+  """Saleor version."""
+  version: String
+
+  """Look up a issuing principal."""
+  issuingPrincipal: IssuingPrincipal
+
+  """Look up a recipient of the webhook."""
+  recipient: App
+
+  """
+  Look up a warehouse.
+  
+  Added in Saleor 3.4.
+  
+  Note: this API is currently in Feature Preview and can be subject to changes at later point.
+  """
+  warehouse: Warehouse
 }
 
 """_Any value scalar as defined by Federation spec."""

@@ -1,5 +1,6 @@
 import graphene
 
+from ...core.exceptions import PermissionDenied
 from ...core.permissions import AppPermission, AuthorizationFilters
 from ..core.connection import create_connection_slice, filter_connection_queryset
 from ..core.descriptions import ADDED_IN_31, PREVIEW_FEATURE
@@ -63,17 +64,26 @@ class AppQueries(graphene.ObjectType):
         sort_by=AppSortingInput(description="Sort apps."),
         description="List of the apps.",
         permissions=[
+            AuthorizationFilters.AUTHENTICATED_STAFF_USER,
             AppPermission.MANAGE_APPS,
         ],
     )
-    app = graphene.Field(
+    app = PermissionsField(
         App,
         id=graphene.Argument(graphene.ID, description="ID of the app.", required=False),
         description=(
             "Look up an app by ID. If ID is not provided, return the currently "
-            "authenticated app. Requires one of the following permissions: "
-            f"{AuthorizationFilters.OWNER}, {AppPermission.MANAGE_APPS}."
+            "authenticated app.\n\nRequires one of the following permissions: "
+            f"{AuthorizationFilters.AUTHENTICATED_STAFF_USER.name} "
+            f"{AuthorizationFilters.AUTHENTICATED_APP.name}. The authenticated app has "
+            f"access to its resources. Fetching different apps requires "
+            f"{AppPermission.MANAGE_APPS.name} permission."
         ),
+        permissions=[
+            AuthorizationFilters.AUTHENTICATED_STAFF_USER,
+            AuthorizationFilters.AUTHENTICATED_APP,
+        ],
+        auto_permission_message=False,
     )
     app_extensions = FilterConnectionField(
         AppExtensionCountableConnection,
@@ -98,28 +108,38 @@ class AppQueries(graphene.ObjectType):
         ],
     )
 
-    def resolve_apps_installations(self, info, **kwargs):
+    @staticmethod
+    def resolve_apps_installations(_root, info, **kwargs):
         return resolve_apps_installations(info, **kwargs)
 
-    def resolve_apps(self, info, **kwargs):
-        qs = resolve_apps(info, **kwargs)
+    @staticmethod
+    def resolve_apps(_root, info, **kwargs):
+        qs = resolve_apps(info)
         qs = filter_connection_queryset(qs, kwargs)
         return create_connection_slice(qs, info, kwargs, AppCountableConnection)
 
-    def resolve_app(self, info, id=None):
-        app = info.context.app
-        if not id and app:
-            return app
+    @staticmethod
+    def resolve_app(_root, info, *, id=None):
+        if app := info.context.app:
+            if not id:
+                return app
+            _, app_id = from_global_id_or_error(id, only_type="App")
+            if int(app_id) == app.id:
+                return app
+            elif not app.has_perm(AppPermission.MANAGE_APPS):
+                raise PermissionDenied(permissions=[AppPermission.MANAGE_APPS])
         return resolve_app(info, id)
 
-    def resolve_app_extensions(self, info, **kwargs):
+    @staticmethod
+    def resolve_app_extensions(_root, info, **kwargs):
         qs = resolve_app_extensions(info)
         qs = filter_connection_queryset(qs, kwargs)
         return create_connection_slice(
             qs, info, kwargs, AppExtensionCountableConnection
         )
 
-    def resolve_app_extension(self, info, id):
+    @staticmethod
+    def resolve_app_extension(_root, info, *, id):
         def app_is_active(app_extension):
             def is_active(app):
                 if app.is_active:
