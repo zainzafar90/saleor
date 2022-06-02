@@ -180,7 +180,6 @@ type Query {
 
   """
   Tax class rates grouped by country.
-
   Requires one of the following permissions: MANAGE_TAXES.
   """
   taxCountryConfiguration(
