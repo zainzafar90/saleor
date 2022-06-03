@@ -91,7 +91,6 @@ def serialize_checkout_lines_for_tax_calculation(
                 line_info.line.total_price / line_info.line.quantity
             ),
             "total_amount": untaxed_price_amount(line_info.line.total_price),
-            "discounts": [],  # Will be implemented in Line level discounts
         }
         for line_info in lines
     ]

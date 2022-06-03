@@ -1316,7 +1316,6 @@ def generate_checkout_payload_for_tax_calculation(
 
     checkout_fields = (
         "currency",
-        "private_metadata",
         "metadata",
     )
 
