@@ -270,7 +270,8 @@ def fetch_checkout_prices_if_expired(
             "discount_amount",
             "discount_name",
             "currency",
-        ]
+        ],
+        using=settings.DATABASE_CONNECTION_DEFAULT_NAME,
     )
 
     checkout.lines.bulk_update(
