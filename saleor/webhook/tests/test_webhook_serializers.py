@@ -162,7 +162,5 @@ def test_serialize_checkout_lines_for_tax_calculation(
             "product_type_metadata": product.product_type.metadata,
             "unit_amount": unit_price,
             "total_amount": total_price,
-            "discounts": [],  # Not Implemented yet.
-            # Will be implemented in line level discounts
         }
     assert len(checkout_lines_data) == len(list(lines))
